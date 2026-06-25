@@ -75,21 +75,38 @@ FMO法の発想はとてもシンプルです。
 
 ## 2. 従来法：いらない軌道に「高い値札」を貼る　── 式(1)
 
-従来法の中心となる式がこれです。
+従来法の中心となる式がこれです。まず、行列の1成分（$\mu$ 行 $\nu$ 列）を書き下した**成分表示**で示します。
+
+```math
+\widetilde{H}^{x}_{\mu\nu} = H^{x}_{\mu\nu} + V^{x}_{\mu\nu} + \sum_i B_i \langle \mu | \varphi_i^{h} \rangle \langle \varphi_i^{h} | \nu \rangle
+```
+
+記号の意味（成分表示）：
+
+- $\mu,\ \nu$：AO（基本の部屋）の番号。行列の **行・列** を指します。
+- $\widetilde{H}^{x}_{\mu\nu}$：レベルシフトを加えたあとのハミルトニアン行列の、$\mu$ 行 $\nu$ 列の成分。
+- $H^{x}_{\mu\nu}$：フラグメント $x$ の **基本のエネルギー装置**（一電子ハミルトニアン）の成分。
+- $V^{x}_{\mu\nu}$：**まわりのフラグメントが作る電気的な環境**（静電ポテンシャル）の成分。「隣の住人からの影響」のようなもの。
+- $\varphi_i^{h}$：**取り除きたい混成軌道**（切断面の宙ぶらりん軌道）。$i$ はその通し番号。
+- $\langle \mu | \varphi_i^{h} \rangle$：AO $\mu$ と、いらない軌道 $\varphi_i^{h}$ の **「重なり」** を表す数。
+- $B_i$：その軌道に与える **ものすごく大きな正の数**（例：100万）。これが「高い値札」。
+
+第3項 $\sum_i B_i \langle \mu | \varphi_i^{h} \rangle \langle \varphi_i^{h} | \nu \rangle$ が、いらない軌道だけにエネルギーを上乗せする部分（**射影項**）です。
+
+この同じ式を、成分を1つずつ書く代わりに **行列でひとまとめ** にすると、
 
 ```math
 \widetilde{\mathbf H}^{x} = \mathbf H^{x}+\mathbf V^{x} + \mathbf S^{x}\mathbf A^{x}\mathbf B (\mathbf A^{x})^\dagger\mathbf S^{x}
 ```
 
-記号の意味：
+と書けます。**以降はこの行列の形を使います**（あとで変換行列 $\mathbf T^x$ を掛ける操作が書きやすいため）。行列側の記号は次の通りで、上の成分表示と1対1に対応します。
 
-- $\mathbf H^x$：フラグメント $x$ の **基本のエネルギー装置**（一電子ハミルトニアン）。
-- $\mathbf V^x$：**まわりのフラグメントが作る電気的な環境**（静電ポテンシャル）。
-  「隣の住人からの影響」のようなもの。
-- $\mathbf S^x$：**重なり行列**（部屋どうしの重なり具合）。
-- $\mathbf A^x$：**取り除きたい軌道**（切断面の宙ぶらりん軌道）を表す表。
-  「これがいらない軌道のリストです」というデータ。
-- $\mathbf B$：**ものすごく大きな正の数**を並べた行列（例：100万）。これが「高い値札」。
+- $\mathbf H^x,\ \mathbf V^x$：上の $H^{x}_{\mu\nu},\ V^{x}_{\mu\nu}$ を全成分まとめた行列。
+- $\mathbf S^x$：**重なり行列**（部屋どうしの重なり具合）。$\mathbf S^x\mathbf A^x$ の成分が、上の重なり $\langle \mu | \varphi_i^{h} \rangle$ にあたります。
+- $\mathbf A^x$：**取り除きたい軌道のリスト**。各列が、いらない混成軌道 $\varphi_i^{h}$ のAO係数です。
+- $\mathbf B$：レベルシフト $B_i$ を対角に並べた行列。**巨大な「高い値札」**。
+
+つまり、第3項 $\mathbf S^{x}\mathbf A^{x}\mathbf B(\mathbf A^{x})^\dagger\mathbf S^{x}$ は、成分表示の射影項 $\sum_i B_i \langle \mu | \varphi_i^{h} \rangle \langle \varphi_i^{h} | \nu \rangle$ を行列で書いたものです（両者は完全に同じ）。
 
 ### この式が何をしているか
 
@@ -220,7 +237,7 @@ B = 10^{6}\ E_{\mathrm h}
 つまり：
 
 ```math
-\sum_i B_i|\phi_i^h\rangle\langle\phi_i^h| \quad(\text{巨大な値札の項})
+\sum_i B_i|\varphi_i^h\rangle\langle\varphi_i^h| \quad(\text{巨大な値札の項})
 ```
 
 という厄介な項は **完全に不要**になり、代わりに
