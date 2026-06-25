@@ -78,6 +78,24 @@ P^{x}_{\mu\nu} = \sum_i (\mathbf S^{x}\mathbf A^{x})_{\mu i}\,B_i\,\big((\mathbf
 | 正規直交（ $\mathbf S^x=\mathbf I$） | $A^{x}_{\mu i}$ | $\mathbf A^x\mathbf B(\mathbf A^x)^{\dagger}$ （ $\mathbf S^x$ なし） |
 | 非直交 AO（一般） | $(\mathbf S^x\mathbf A^x)_{\mu i}$ | $\mathbf S^x\mathbf A^x\mathbf B(\mathbf A^x)^{\dagger}\mathbf S^x$ |
 
+### 補足：なぜ AO 基底は非直交なのか（直交化の可能性）
+
+上で $\mathbf S^x$ が2個現れるのは「 AO 基底が非直交（ $\mathbf S^x\neq\mathbf I$）」だからである。ではなぜ非直交なのか、直交にはできないのか。
+
+**(a) 非直交は原子中心基底の空間的重なりに由来する。** AO $\chi_\mu$ は原子核に中心を持つ関数（ GTO / STO ）であり、重なり行列の要素は
+
+```math
+S^{x}_{\mu\nu} = \int \chi_\mu^{*}(\mathbf r)\,\chi_\nu(\mathbf r)\,d\mathbf r
+```
+
+で与えられる。異なる原子上の2つの関数は空間的に広がって重なり合うため、一般に $S^{x}_{\mu\nu}\neq 0$（ $\mu\neq\nu$）となる。これは化学結合を生む軌道重なりそのものであり、原理的にゼロにはできない。同一原子上でも、角運動量が異なれば（ s と p など）球面調和関数の直交性により重なりは消えるが、同じ角運動量で動径部が異なる関数（ multiple-zeta など）は一般に重なりをもつ。したがって全体として $\mathbf S^x\neq\mathbf I$ である。
+
+**(b) 直交化は可能だが、 AO の利点を失う。** 対称（ Löwdin ）直交化 $\tilde{\boldsymbol\chi}=\boldsymbol\chi\,\mathbf S^{-1/2}$ や正準直交化により正規直交 AO（ OAO ）を作れば $\mathbf S^x=\mathbf I$ となり、射影項は $\mathbf A^x\mathbf B(\mathbf A^x)^{\dagger}$ に簡約される。しかし直交化された関数 $\tilde\chi_\mu$ はもとの AO の線形結合（非局所的に広がった関数）であり、「特定の原子に属する基底関数」という素直な意味と移植性を失う。さらに $\mathbf S^{-1/2}$ の構成自体に $\mathbf S^x$ を要するため、 $\mathbf S^x$ から完全に逃れられるわけではない。
+
+**(c) 慣例として非直交 AO のまま扱う。** このため標準的な HF / Roothaan–Hall では、非直交 AO 基底のまま $\mathbf S^x$ を陽に保持し（ $\mathbf{FC}=\mathbf{SC}\boldsymbol\varepsilon$）、原子中心関数の利点を生かす。本ノートの $\mathbf A^x$ も実際に計算で用いる非直交 AO 基底での展開係数であり、その帰結として射影項に $\mathbf S^x$ が2個現れる。なお第7節の $S$-正規直交化（式8）は、許容空間の縮約基底 $\mathbf T^x$ に対してこの直交化を施し、縮約 SCF を標準固有値問題に帰着させる操作にあたる。
+
+---
+
 射影項 $\mathbf P^x=\mathbf S^{x}\mathbf A^{x}\mathbf B(\mathbf A^{x})^{\dagger}\mathbf S^{x}$ を Fock 行列に加えて Roothaan–Hall を解くと、
 $\{\varphi_i^{h}\}$ 方向の軌道エネルギーが $\sim B_i$ だけ持ち上がり、被占有空間から押し出される。
 典型的には $B_i = 10^{6}\,E_{\mathrm h}$ 程度を用いる。
