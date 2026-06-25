@@ -1,425 +1,181 @@
-# やさしい解説：いらない軌道を「行列変換」で除去する
+# FMO境界処理における不要混成軌道の除去：レベルシフト射影と矩形変換
 
-> このファイルは、射影項を行列変換で除去する手法を、量子化学の専門家でなくても
-> 理解できるように、背景・たとえ話・各数式の意味をかみくだいて説明したものです。
->
-> **式番号について：** この解説ファイルは独立して読めるように、
-> 式番号を**(1)〜(10)の通し番号**で振っています。
-
----
-
-## 0. まず全体像：この文書は「何の話」なのか
-
-大きな分子（例：タンパク質）をコンピュータで計算しようとすると、原子の数が多すぎて
-まともに計算できません。そこで使われるのが **FMO法（フラグメント分子軌道法）** です。
-
-FMO法の発想はとてもシンプルです。
-
-> 大きな分子を、**小さなかけら（フラグメント）に切り分けて**、
-> かけらごとに計算し、あとで足し合わせる。
-
-ところがここで困ったことが起きます。分子を切り分けるとき、**化学結合の途中で
-ハサミを入れる**ことになります。たとえばタンパク質を切ると、炭素どうしの結合
-（C–C結合）を切断することになります。
-
-結合を途中で切ると、その断面に「**本来あるはずのない、宙ぶらりんな電子の軌道**」が
-できてしまいます。これをそのまま計算に入れると、答えがおかしくなります。
-
-そこで必要になるのが、
-
-> 「切断面にできた**いらない軌道を、計算から取り除く**」
-
-という操作です。**この文書は、その『いらない軌道を取り除く方法』の話**です。
-
-そして、取り除く方法には2つの流派があります。
-
-| 方法 | やり方のイメージ | キーワード |
-|------|------------------|------------|
-| **A. 従来法（式(1)）** | いらない軌道に「ものすごく高いエネルギーの値札」を貼って、自然と使われないようにする | レベルシフト |
-| **B. 新しい方法（式(4)）** | いらない軌道を、計算の土俵から**最初から除外する** | 行列変換 |
-
-元資料が言いたいことを一言でまとめると：
-
-> **「Aの“高い値札を貼る”やり方は、Bの“最初から除外する”やり方と、数学的には同じこと。
-> しかもBの方がきれい（誤差が残らない）。」**
-
-以下、これを順番に説明します。
+> 想定読者：Hartree–Fock / Roothaan–Hall 法（$\mathbf{FC}=\mathbf{SC}\boldsymbol\varepsilon$、密度行列、一般化固有値問題、射影演算子）を理解している方。
+> FMO のフラグメント境界処理において、切断結合方向の混成軌道を変分空間から除去する2つの方法
+> ——(i) 巨大レベルシフトによる射影、(ii) 矩形変換による厳密 deflation——を対比し、両者が
+> $B\to\infty$ 極限で一致することを示す。式番号は本ノート内で完結する通し番号 (1)–(8)。
 
 ---
 
-## 1. 用語のミニ辞典（先に読むと以降がラク）
+## 1. 問題設定
 
-専門用語が出てくるので、ざっくりした意味を先に並べておきます。
-（厳密な定義ではなく「だいたいこういうもの」というイメージです。）
+FMO では共有結合を跨いでフラグメント分割するため、結合切断点（BDA: bond-detached atom）に、
+切断結合方向を向いた混成軌道 $\{\varphi_i^{h}\}$ が現れる。これらをフラグメント $x$ のモノマー SCF の
+変分空間に残すと、被占有 MO に非物理的な成分が混入する。したがって $\{\varphi_i^{h}\}$ を
+**変分空間から排除**する必要がある。標準的手法は、これらに巨大なレベルシフトを与える
+射影（hybrid orbital projection, HOP）である。
 
-- **軌道（orbital）**：電子が存在できる「部屋」のようなもの。分子の中の電子は、
-  この部屋に住んでいると考えます。
-- **AO（原子軌道, Atomic Orbital）**：個々の原子に属する基本の部屋。計算の「部品」。
-- **MO（分子軌道, Molecular Orbital）**：AO（部品）を混ぜ合わせて作る、分子全体の部屋。
-  実際に電子が住むのはこちら。
-- **混成軌道（hybrid orbital）**：いくつかのAOを混ぜて作った、方向性を持つ軌道。
-  例：炭素の `sp³` 混成軌道は、四方向（正四面体の頂点方向）を向いた4本の腕。
-- **ハミルトニアン $H$**：エネルギーを計算する「装置（行列）」。
-- **重なり行列 $S$**：部屋（軌道）どうしが「どれくらい重なっているか」を表す表。
-  AOは互いに少し重なっているので、これが必要になります。
-- **SCF / Fock方程式**：電子の配置を「つじつまが合うまで」繰り返し解く計算手順。
-  量子化学計算のエンジン部分。
-- **変分空間（variational space）**：「電子がここに住んでもいいですよ」と
-  計算に許可している部屋の集まり。**ここに含めなければ、その軌道は使われません。**
-
-> ★最重要イメージ：
-> 「**変分空間に入れる ＝ 使ってよい部屋**」「**変分空間から外す ＝ 立ち入り禁止**」。
-> この文書全体は、**いらない軌道をどうやって“立ち入り禁止”にするか**の話です。
+記号：$\mathbf H^x$ コアハミルトニアン、$\mathbf V^x$ 環境静電ポテンシャル（他フラグメントの ESP）、
+$\mathbf S^x$ AO 重なり行列、$\mathbf A^x$ は $\varphi_i^{h}=\sum_\mu A^x_{\mu i}\chi_\mu$ の展開係数を列に持つ
+$N\times m$ 行列（$m$ は除去本数）、$\mathbf B=\mathrm{diag}(B_i)$ レベルシフト。
 
 ---
 
-## 2. 従来法：いらない軌道に「高い値札」を貼る　── 式(1)
+## 2. レベルシフト射影（式1）
 
-従来法の中心となる式がこれです。まず、行列の1成分（$\mu$ 行 $\nu$ 列）を書き下した**成分表示**で示します。
-
-```math
-\widetilde{H}^{x}_{\mu\nu} = H^{x}_{\mu\nu} + V^{x}_{\mu\nu} + \sum_i B_i \langle \mu | \varphi_i^{h} \rangle \langle \varphi_i^{h} | \nu \rangle
-```
-
-記号の意味（成分表示）：
-
-- $\mu,\ \nu$：AO（基本の部屋）の番号。行列の **行・列** を指します。
-- $\widetilde{H}^{x}_{\mu\nu}$：レベルシフトを加えたあとのハミルトニアン行列の、$\mu$ 行 $\nu$ 列の成分。
-- $H^{x}_{\mu\nu}$：フラグメント $x$ の **基本のエネルギー装置**（一電子ハミルトニアン）の成分。
-- $V^{x}_{\mu\nu}$：**まわりのフラグメントが作る電気的な環境**（静電ポテンシャル）の成分。「隣の住人からの影響」のようなもの。
-- $\varphi_i^{h}$：**取り除きたい混成軌道**（切断面の宙ぶらりん軌道）。$i$ はその通し番号。
-- $\langle \mu | \varphi_i^{h} \rangle$：AO $\mu$ と、いらない軌道 $\varphi_i^{h}$ の **「重なり」** を表す数。
-- $B_i$：その軌道に与える **ものすごく大きな正の数**（例：100万）。これが「高い値札」。
-
-第3項 $\sum_i B_i \langle \mu | \varphi_i^{h} \rangle \langle \varphi_i^{h} | \nu \rangle$ が、いらない軌道だけにエネルギーを上乗せする部分（**射影項**）です。
-
-この同じ式を、成分を1つずつ書く代わりに **行列でひとまとめ** にすると、
+成分表示（$\mu,\nu$ は AO 添字）：
 
 ```math
-\widetilde{\mathbf H}^{x} = \mathbf H^{x}+\mathbf V^{x} + \mathbf S^{x}\mathbf A^{x}\mathbf B (\mathbf A^{x})^\dagger\mathbf S^{x}
+\widetilde{H}^{x}_{\mu\nu} = H^{x}_{\mu\nu} + V^{x}_{\mu\nu} + \sum_i B_i \langle \mu | \varphi_i^{h} \rangle \langle \varphi_i^{h} | \nu \rangle \qquad (1)
 ```
 
-と書けます。**以降はこの行列の形を使います**（あとで変換行列 $\mathbf T^x$ を掛ける操作が書きやすいため）。行列側の記号は次の通りで、上の成分表示と1対1に対応します。
-
-- $\mathbf H^x,\ \mathbf V^x$：上の $H^{x}_{\mu\nu},\ V^{x}_{\mu\nu}$ を全成分まとめた行列。
-- $\mathbf S^x$：**重なり行列**（部屋どうしの重なり具合）。$\mathbf S^x\mathbf A^x$ の成分が、上の重なり $\langle \mu | \varphi_i^{h} \rangle$ にあたります。
-- $\mathbf A^x$：**取り除きたい軌道のリスト**。各列が、いらない混成軌道 $\varphi_i^{h}$ のAO係数です。
-- $\mathbf B$：レベルシフト $B_i$ を対角に並べた行列。**巨大な「高い値札」**。
-
-つまり、第3項 $\mathbf S^{x}\mathbf A^{x}\mathbf B(\mathbf A^{x})^\dagger\mathbf S^{x}$ は、成分表示の射影項 $\sum_i B_i \langle \mu | \varphi_i^{h} \rangle \langle \varphi_i^{h} | \nu \rangle$ を行列で書いたものです（両者は完全に同じ）。
-
-### この式が何をしているか
-
-式(1)の前半 $\mathbf H^{x}+\mathbf V^{x}$ は「普通のエネルギー計算」です。
-
-問題は後半の長い項：
+ここで $\langle\mu|\varphi_i^{h}\rangle = (\mathbf S^x\mathbf A^x)_{\mu i}$。第3項は射影演算子
+$\hat P=\sum_i B_i\,|\varphi_i^{h}\rangle\langle\varphi_i^{h}|$ の AO 表現であり、行列でまとめると
 
 ```math
-\mathbf S^{x}\mathbf A^{x}\mathbf B(\mathbf A^{x})^\dagger\mathbf S^{x}
+\widetilde{\mathbf H}^{x} = \mathbf H^{x} + \mathbf V^{x} + \mathbf S^{x}\mathbf A^{x}\mathbf B\,(\mathbf A^{x})^{\dagger}\mathbf S^{x} \qquad (1')
 ```
 
-これは **「いらない軌道（$\mathbf A^x$）にだけ、巨大なエネルギー $\mathbf B$ を上乗せする」**
-という仕掛けです。専門的には **射影項（しゃえいこう, projection term）** と呼びます。
-
-電子は基本的に「**エネルギーが低い部屋を好んで住む**」性質があります。
-だから、いらない軌道のエネルギーを人為的に天文学的な高さに押し上げてしまえば、
-電子は「そんな高い部屋には住みたくない」と判断して、自然とその軌道を避けます。
-
-> **たとえ話：**
-> 立ち入ってほしくない部屋に、**「宿泊料100万円／泊」**という札を貼るようなもの。
-> 物理的にドアを塞いではいないけれど、誰も泊まらないので実質的に使われません。
-
-これが従来法（レベルシフト法）です。後述するように、典型的には
-
-```math
-B = 10^{6}\ E_{\mathrm h}
-```
-
-（$E_{\mathrm h}$ はエネルギーの単位「ハートリー」）といった巨大な値を使います。
-
-### 従来法の弱点
-
-このやり方には、ちょっとした「気持ち悪さ」があります。
-
-- 値札（$B$）は**有限の大きさ**なので、電子がその軌道を使う確率は
-  **完全なゼロにはなりません**。ほんのわずか（だいたい $1/B$ くらい）残ります。
-- つまり「ほぼ立ち入り禁止」であって「**完全な立ち入り禁止ではない**」。
-
-この残りカスをゼロにできないか？ という動機から、次の新しい方法が出てきます。
+射影項 $\mathbf P^x=\mathbf S^{x}\mathbf A^{x}\mathbf B(\mathbf A^{x})^{\dagger}\mathbf S^{x}$ を Fock 行列に加えて Roothaan–Hall を解くと、
+$\{\varphi_i^{h}\}$ 方向の軌道エネルギーが $\sim B_i$ だけ持ち上がり、被占有空間から押し出される。
+典型的には $B_i = 10^{6}\,E_{\mathrm h}$ 程度を用いる。
 
 ---
 
-## 3. 新しい方法のアイデア：そもそも部屋を「設計図から消す」
+## 3. 有限レベルシフトの残差
 
-発想の転換はこうです。
-
-> 高い値札を貼って避けてもらうのではなく、
-> **いらない軌道を、計算の土俵（変分空間）から最初から消してしまえばいい。**
-
-そのための道具が、**矩形（くけい）変換行列 $\mathbf T^x$** です。
-「矩形」は「長方形」という意味で、なぜ長方形なのかは後で分かります。
-
-### 式(2)：いらない軌道と「直交する」空間を作る
-
-```math
-(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x=0
-```
-
-この式は、見た目は難しいですが、言っていることは1つだけ：
-
-> **「$\mathbf T^x$ が張る空間は、いらない軌道（$\mathbf A^x$）と一切重ならないようにする」**
-
-ここで「重ならない」を数学では **直交（ちょっこう, orthogonal）** と言います。
-「ゼロになる（$=0$）」というのは「成分がまったく含まれていない」という意味です。
-
-> **たとえ話：**
-> $\mathbf T^x$ は「いらない部屋を**間取り図から消した、新しい間取り図**」。
-> 式(2)は「その新しい間取り図には、いらない部屋が**1ミリも残っていない**」という保証。
-
-### 式(3)：新しい間取り図の上で計算する
-
-```math
-\mathbf C^x=\mathbf T^x\mathbf C_{\mathrm r}^x
-```
-
-- $\mathbf C^x$：本来のMO係数（電子の住み方の設計図）。
-- $\mathbf C_{\mathrm r}^x$：**いらない部屋を消した、縮小版の設計図**（添字 r は reduced＝縮小の意味）。
-
-この式は「縮小版の設計図 $\mathbf C_{\mathrm r}^x$ を、変換 $\mathbf T^x$ を通すと、
-ちゃんと元の世界の設計図 $\mathbf C^x$ になる」ことを表します。
-
-ポイントは、**縮小版の設計図をどう作っても**（どんな $\mathbf C_{\mathrm r}^x$ を選んでも）、
-式(2)のおかげで
-
-```math
-(\mathbf A^x)^\dagger\mathbf S^x\mathbf C^x=0
-```
-
-が自動的に成り立つこと。つまり **「うっかり、いらない軌道を使ってしまう」ことが
-原理的に起こらない**。立ち入り禁止が完璧に保証されます。
+有限 $B$ では除去は近似的でしかない。被占有 MO に残る $\{\varphi_i^{h}\}$ 射影成分は摂動論的に $O(B^{-1})$ で、
+$B$ を上げると $\widetilde{\mathbf F}^x$ の条件数が悪化し、SCF 収束・数値安定性とトレードオフになる。
+この残差を厳密にゼロにするのが次の矩形変換である。
 
 ---
 
-## 4. 式(1)が劇的にシンプルになる（射影項が消える）── 式(4)
+## 4. 矩形変換による厳密 deflation（式2）
 
-ここがこの文書のクライマックスです。
-
-新しい間取り図 $\mathbf T^x$ の上に式(1)を「乗せ替える」操作をします
-（専門用語で **合同変換**。要は「新しい座標系で書き直す」こと）。
+許容空間（$\{\varphi_i^{h}\}$ と $S$-直交する部分空間）を張る矩形行列
+$\mathbf T^x\in\mathbb{R}^{N\times(N-m)}$ を、
 
 ```math
-(\mathbf T^x)^\dagger \widetilde{\mathbf H}^{x} \mathbf T^x = (\mathbf T^x)^\dagger (\mathbf H^x+\mathbf V^x) \mathbf T^x + \underbrace{(\mathbf T^x)^\dagger \mathbf S^x\mathbf A^x\mathbf B (\mathbf A^x)^\dagger\mathbf S^x \mathbf T^x}_{\text{この射影項が…}}
+(\mathbf A^{x})^{\dagger}\mathbf S^{x}\mathbf T^{x} = \mathbf 0 \qquad (2)
 ```
 
-ここで、あの厄介だった**射影項（高い値札の項）**を計算すると：
+を満たすように構成する。すなわち $\mathbf T^x$ の列は、$m\times N$ 行列 $(\mathbf A^{x})^{\dagger}\mathbf S^{x}$ の
+**核 $\ker\!\big((\mathbf A^{x})^{\dagger}\mathbf S^{x}\big)$（次元 $N-m$）の基底**にとる。
+
+MO 係数を $\mathbf C^x = \mathbf T^x \mathbf C_{\mathrm r}^x$ と縮約パラメータ化すると、任意の $\mathbf C_{\mathrm r}^x$ に対して
 
 ```math
-\begin{aligned} &(\mathbf T^x)^\dagger \mathbf S^x\mathbf A^x\mathbf B (\mathbf A^x)^\dagger\mathbf S^x \mathbf T^x\\ &= \underbrace{\left[(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x\right]}_{=\,0\ \text{(式2より)}}^\dagger \ \mathbf B\ \underbrace{\left[(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x\right]}_{=\,0\ \text{(式2より)}}\\ &=0 \end{aligned}
+(\mathbf A^{x})^{\dagger}\mathbf S^{x}\mathbf C^{x} = (\mathbf A^{x})^{\dagger}\mathbf S^{x}\mathbf T^x\mathbf C_{\mathrm r}^x = \mathbf 0
 ```
 
-何が起きたかというと：
-
-> 射影項の中に、ちょうど式(2)で「ゼロだ」と決めた塊
-> $\big[(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x\big]$ が**含まれている**。
-> ゼロを掛けるので、**項全体がまるごと消える**。
-
-巨大な値 $\mathbf B$（100万）が何であろうと、ゼロ × 何か × ゼロ ＝ ゼロ。
-**$\mathbf B$ はもう一切関係なくなります。**
-
-### 結論の式(4)
-
-こうして式(1)は、すっきりこうなります。
-
-```math
-\boxed{ \mathbf H_{\mathrm r}^{x} = (\mathbf T^x)^\dagger \left(\mathbf H^x+\mathbf V^x\right) \mathbf T^x }
-```
-
-つまり：
-
-```math
-\sum_i B_i|\varphi_i^h\rangle\langle\varphi_i^h| \quad(\text{巨大な値札の項})
-```
-
-という厄介な項は **完全に不要**になり、代わりに
-
-```math
-\boxed{ (\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x=0 }
-```
-
-という **「いらない軌道は最初から土俵にない」という約束（拘束条件＝式(2)）** を、
-変換行列 $\mathbf T^x$ にあらかじめ組み込んでおくだけでよくなります。
-
-> **要するに：**
-> 「高い値札を貼って避けてもらう」（式(1)）から、
-> 「**そもそも部屋を作らない**」（式(4)）へ。
-> やりたいこと（いらない軌道を使わせない）は同じですが、後者の方が
-> 仕掛けがシンプルで、誤差も残りません。
+が恒等的に成立する。除去対象は最初から変分空間に含まれない。
 
 ---
 
-## 5. 計算（SCF）の流れも、縮小版に置き換わるだけ ── 式(5)〜(8)
+## 5. 合同変換と射影項の消失（式3）
 
-実際の量子化学計算は、Fock方程式という式を「答えが安定するまで繰り返す」（SCF）
-ことで行います。新しい方法では、その方程式も**すべて縮小版**に置き換わります。
-やっていることは「全部 $\mathbf T^x$ で挟んで小さくする」だけです。
+式 $(1')$ を許容空間へ合同変換すると、
 
 ```math
-\mathbf F_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x} = \mathbf S_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x} \boldsymbol\varepsilon^{x}
+(\mathbf T^x)^{\dagger}\widetilde{\mathbf H}^{x}\mathbf T^x = (\mathbf T^x)^{\dagger}(\mathbf H^x+\mathbf V^x)\mathbf T^x + \big[(\mathbf A^x)^{\dagger}\mathbf S^x\mathbf T^x\big]^{\dagger}\mathbf B\,\big[(\mathbf A^x)^{\dagger}\mathbf S^x\mathbf T^x\big]
 ```
 
-各部品（添字 r はすべて「縮小版」）：
+第2項は式(2)より厳密に $\mathbf 0$。$\mathbf B$ の大きさに依らず消える。したがって
 
 ```math
-\mathbf S_{\mathrm r}^{x}=(\mathbf T^x)^\dagger\mathbf S^x\mathbf T^x
+\mathbf H_{\mathrm r}^{x} = (\mathbf T^x)^{\dagger}\left(\mathbf H^x+\mathbf V^x\right)\mathbf T^x \qquad (3)
 ```
-（重なり行列の縮小版）
 
-```math
-\mathbf F_{\mathrm r}^{x}=(\mathbf T^x)^\dagger \left[\mathbf H^x+\mathbf V^x+\mathbf G^x[\mathbf D^x]\right]\mathbf T^x
-```
-（Fock行列の縮小版。$\mathbf G^x[\mathbf D^x]$ は電子どうしの反発から作る項）
-
-```math
-\mathbf D^x=\mathbf T^x\mathbf D_{\mathrm r}^{x}(\mathbf T^x)^\dagger
-```
-（縮小版の結果を、元の世界に戻す式。電子密度の変換）
-
-```math
-\boldsymbol\varepsilon^{x}
-```
-はエネルギー準位（各軌道のエネルギー）です。
-
-要点：**「$(\mathbf T^x)^\dagger \cdots \mathbf T^x$」で挟む ＝ いらない部屋を外した世界に書き直す**。
-それだけで、計算全体がいらない軌道を含まないものになります。
+レベルシフト項は完全に消去され、その役割は拘束条件(2)が引き継ぐ。すなわち
+**「巨大 $\mathbf B$ を付与する」操作が「部分空間を陽に取り除く」操作に置き換わる**。
 
 ---
 
-## 6. もうひと工夫：「行儀のよい部屋」にしておくと、もっと簡単 ── 式(9)〜(10)
+## 6. 縮約 SCF 方程式（式4–7）
 
-$\mathbf T^x$ を作るとき、新しい部屋たちを **きれいに整える**（互いに重ならず、
-大きさ1にそろえる）と、計算がさらに楽になります。これを **S-正規直交化** と言います。
-
-```math
-(\mathbf T^x)^\dagger\mathbf S^x\mathbf T^x=\mathbf I
-```
-
-ここで $\mathbf I$ は単位行列（「対角線が1、ほかは0」の、いちばん素直な表）。
-これは「重なり行列が消えて、ただの“何もない状態”になった」という意味です。
-
-すると方程式(5)から重なり行列 $\mathbf S_{\mathrm r}^x$ が消えて、いちばん解きやすい
-**普通の固有値問題**になります：
+縮約空間（次元 $N-m$）での一般化固有値問題：
 
 ```math
-\boxed{ \mathbf F_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x} = \mathbf C_{\mathrm r}^{x}\boldsymbol\varepsilon^{x} }
+\mathbf F_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x} = \mathbf S_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x}\boldsymbol\varepsilon^{x} \qquad (4)
 ```
 
-> 専門的に言えば「一般化固有値問題 → 標準固有値問題」への単純化。
-> 計算機にとって解きやすい、きれいな形になった、というご利益です。
+各行列は元空間の量を $\mathbf T^x$ で合同変換したもの：
+
+```math
+\mathbf S_{\mathrm r}^{x} = (\mathbf T^x)^{\dagger}\mathbf S^x\mathbf T^x \qquad (5)
+```
+
+```math
+\mathbf F_{\mathrm r}^{x} = (\mathbf T^x)^{\dagger}\big[\mathbf H^x+\mathbf V^x+\mathbf G^x[\mathbf D^x]\big]\mathbf T^x \qquad (6)
+```
+
+```math
+\mathbf D^x = \mathbf T^x\mathbf D_{\mathrm r}^{x}(\mathbf T^x)^{\dagger} \qquad (7)
+```
+
+$\mathbf G^x[\mathbf D^x]$ は二電子部分（Coulomb + exchange）。SCF は縮約空間で密度 $\mathbf D_{\mathrm r}^x$ を更新し、
+$\mathbf D^x$ を介して $\mathbf G^x$ を組む。除去軌道は密度に一切寄与しない。
 
 ---
 
-## 7. 具体例：炭素の `sp³` 軌道を1本だけ取り除く
+## 7. $S$-正規直交化（式8）
 
-抽象論ばかりだったので、具体例で「矩形（長方形）」の意味を見ます。
-
-炭素原子は、4本の `sp³` 混成軌道（4方向に伸びた腕）を持っています。
-タンパク質などをC–C結合で切ると、**切断方向を向いた1本の腕**が宙ぶらりんになります。
-これが「いらない軌道」です。だから：
+$\mathbf T^x$ を $S$-正規直交、すなわち
 
 ```math
-4\ \text{本}\ \longrightarrow\ 3\ \text{本}
+(\mathbf T^x)^{\dagger}\mathbf S^x\mathbf T^x = \mathbf I
 ```
 
-と、1本減らします（局所的にはこの縮小）。
-
-分子全体で見ると、もともとAO（部品）が $N$ 個あって、そこから独立な軌道を1本消すので、
-変換行列 $\mathbf T^x$ の形は：
+にとれば $\mathbf S_{\mathrm r}^x=\mathbf I$ となり、(4) は標準固有値問題に帰着する：
 
 ```math
-\mathbf T^x:\quad N\times(N-1)
+\mathbf F_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x} = \mathbf C_{\mathrm r}^{x}\boldsymbol\varepsilon^{x} \qquad (8)
 ```
 
-つまり **縦 $N$・横 $N-1$ の長方形**になります。
-入り口は $N$ 個、出口は $N-1$ 個 ── **1つ少ない出口に押し込める**から長方形なのです。
-（これが「矩形＝長方形変換」と呼ばれる理由。正方形ではなく、わざと出口を1つ減らしている。）
-
-結果として、計算で扱う部屋の数（変分空間の次元）は：
-
-```math
-N\ \longrightarrow\ N-1
-```
-
-と、ちょうど1つだけ減ります。「いらない1本」がきれいに消えた状態です。
+実装上は $\ker\!\big((\mathbf A^{x})^{\dagger}\mathbf S^{x}\big)$ の基底に対して $S$-計量での Löwdin 直交化
+（あるいは正準直交化）を施して $\mathbf T^x$ を得る。
 
 ---
 
-## 8. まとめ：2つの方法はどういう関係か
+## 8. 次元削減
 
-最後に、従来法（式(1)）と新方法（式(4)）の関係です。
+$sp^3$ 炭素を 1 本切断する場合、局所価電子空間では $4\to 3$。全体では
+$\mathbf T^x:\ N\times(N-1)$、変分次元は $N\to N-1$。一般に $m$ 本除去で $N\to N-m$ となり、
+Fock 構築後の対角化コストもこの縮約次元で評価される。
+
+---
+
+## 9. レベルシフト法との関係
+
+矩形変換による厳密 deflation は、レベルシフトの $B\to\infty$ 極限と等価である：
 
 ```math
-\boxed{ \text{矩形変換による切り取り} \quad\Longleftrightarrow\quad B\rightarrow+\infty }
+\text{矩形変換 (deflation)} \quad\Longleftrightarrow\quad B \to +\infty
 ```
 
-これは次のことを言っています。
-
-> **新方法（部屋を消す）は、従来法（値札を貼る）で“値札の額を無限大にした”極限と同じ。**
-
-- 従来法：値札 $B$ は有限（例：100万）。だから、いらない軌道の成分が
-  **ほんのわずか（だいたい $1/B$）残る**。完璧ではない。
-- 新方法：式(2)の約束により、いらない軌道の成分は
-  **（計算機の精度の範囲で）ぴったりゼロ**。完璧。
-
-| | 従来法（式(1)／レベルシフト） | 新方法（式(4)／矩形変換） |
+| | レベルシフト射影 (式1) | 矩形変換 (式3) |
 |---|---|---|
-| やり方 | いらない軌道に巨大エネルギーを上乗せ | いらない軌道を変分空間から削除 |
-| 仕掛け | $\mathbf B$（例 $10^6$）の射影項 | 拘束条件 $(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x=0$（式(2)） |
-| いらない成分の残り | わずかに残る（$O(1/B)$） | 厳密にゼロ |
-| 式の見た目 | 余分な射影項あり | 余分な項なし（すっきり） |
-| 解く問題 | 元のサイズ $N$ | 縮小サイズ $N-1$（小さく速い） |
-| 両者の関係 | — | $B\to\infty$ の極限が新方法 |
-
-### ひとことで
-
-> いらない軌道を **「高い値札で避けてもらう」** のが従来法、
-> **「間取り図から消す」** のが新方法。
-> 目的は同じ（いらない軌道を使わせない）だが、新方法の方が
-> **シンプル・正確・計算も軽い**。両者は数学的に $B\to\infty$ でつながっている。
+| 除去の機構 | $\{\varphi_i^h\}$ に $\sim B_i$ を加え被占有空間から排除 | $\ker((\mathbf A^x)^\dagger\mathbf S^x)$ へ変分空間を制限 |
+| 拘束 | $\mathbf P^x=\mathbf S^x\mathbf A^x\mathbf B(\mathbf A^x)^\dagger\mathbf S^x$ を Fock に加算 | $(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x=\mathbf 0$ |
+| 残留成分 | $O(B^{-1})$（近似的） | 機械精度でゼロ（厳密） |
+| 次元 | $N$ のまま | $N-m$ に縮約 |
+| 数値特性 | 大 $B$ で条件数悪化 | 条件数悪化なし・対角化も縮約次元 |
+| 関係 | — | $B\to\infty$ 極限が矩形変換 |
 
 ---
 
-## 付録A：式番号の索引
+## 付録：記号一覧
 
-| 式番号 | 内容 |
-|--------|------|
-| 式(1) | 射影項つきハミルトニアン $\widetilde{\mathbf H}^x$ |
-| 式(2) | 除去軌道との直交条件 $(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x=0$ |
-| 式(3) | MO係数の変換 $\mathbf C^x=\mathbf T^x\mathbf C_{\mathrm r}^x$ |
-| 式(4) | 射影項が消えた縮小ハミルトニアン $\mathbf H_{\mathrm r}^x$ |
-| 式(5) | 縮小Fock方程式 |
-| 式(6) | 縮小重なり行列 $\mathbf S_{\mathrm r}^x$ |
-| 式(7) | 縮小Fock行列 $\mathbf F_{\mathrm r}^x$ |
-| 式(8) | 密度行列の変換 $\mathbf D^x$ |
-| 式(9) | S-正規直交化条件 |
-| 式(10) | 標準固有値問題 |
-
----
-
-## 付録B：記号の早見表
-
-| 記号 | 読み・意味 | ざっくり言うと |
-|------|-----------|----------------|
-| $\mathbf H^x$ | ハミルトニアン | 基本のエネルギー装置 |
-| $\mathbf V^x$ | 環境ポテンシャル | 隣のフラグメントからの影響 |
-| $\mathbf S^x$ | 重なり行列 | 部屋どうしの重なり具合 |
-| $\mathbf A^x$ | 除去軌道の係数 | いらない軌道のリスト |
-| $\mathbf B$ | レベルシフト行列 | 巨大な「高い値札」 |
-| $\mathbf T^x$ | 矩形変換行列 | いらない部屋を消した新しい間取り図 |
-| $\mathbf C^x$ | MO係数 | 電子の住み方の設計図 |
-| $\mathbf C_{\mathrm r}^x$ | 縮小MO係数 | 縮小版の設計図 |
-| $\mathbf F^x$ | Fock行列 | 計算エンジンの心臓部 |
-| $\mathbf D^x$ | 密度行列 | 電子がどこにどれだけいるか |
-| $\boldsymbol\varepsilon^x$ | 軌道エネルギー | 各部屋のエネルギーの高さ |
-| $\mathbf I$ | 単位行列 | いちばん素直な表（対角1・他0） |
-| $\dagger$ | ダガー（随伴） | 行列を「転置＆複素共役」する操作 |
-| 添字 $\mathrm r$ | reduced | 「いらない軌道を消した縮小版」の印 |
+| 記号 | 意味 |
+|------|------|
+| $\mathbf H^x,\ \mathbf V^x$ | コアハミルトニアン、環境 ESP |
+| $\mathbf S^x$ | AO 重なり行列 |
+| $\mathbf A^x$ | 除去混成軌道 $\varphi_i^h$ の AO 係数（$N\times m$、列ベクトル） |
+| $\mathbf B=\mathrm{diag}(B_i)$ | レベルシフト |
+| $\mathbf P^x=\mathbf S^x\mathbf A^x\mathbf B(\mathbf A^x)^\dagger\mathbf S^x$ | AO 表現の射影項 |
+| $\mathbf T^x$ | 矩形変換行列（$N\times(N-m)$、$\ker((\mathbf A^x)^\dagger\mathbf S^x)$ の基底） |
+| $\mathbf C^x,\ \mathbf C_{\mathrm r}^x$ | MO 係数（元空間 / 縮約空間） |
+| $\mathbf F^x,\ \mathbf G^x[\mathbf D^x]$ | Fock 行列、二電子部分 |
+| $\mathbf D^x,\ \mathbf D_{\mathrm r}^x$ | 密度行列（元 / 縮約） |
+| $\boldsymbol\varepsilon^x$ | 軌道エネルギー |
+| $N,\ m$ | AO 基底数、除去軌道本数 |
