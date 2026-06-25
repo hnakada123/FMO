@@ -1,6 +1,5 @@
 # FMO境界処理における不要混成軌道の除去：レベルシフト射影と矩形変換
 
-> 想定読者：Hartree–Fock / Roothaan–Hall 法（ $\mathbf{FC}=\mathbf{SC}\boldsymbol\varepsilon$、密度行列、一般化固有値問題、射影演算子）を理解している方。
 > FMO のフラグメント境界処理において、切断結合方向の混成軌道を変分空間から除去する2つの方法
 > ——(i) 巨大レベルシフトによる射影、(ii) 矩形変換による厳密 deflation——を対比し、両者が
 > $B\to\infty$ 極限で一致することを示す。式番号は本ノート内で完結する通し番号 (1)–(8)。
@@ -60,7 +59,7 @@ $\mathbf T^x\in\mathbb{R}^{N\times(N-m)}$ を、
 ```
 
 を満たすように構成する。すなわち $\mathbf T^x$ の列は、 $m\times N$ 行列 $(\mathbf A^{x})^{\dagger}\mathbf S^{x}$ の
-**核 $\ker\!\big((\mathbf A^{x})^{\dagger}\mathbf S^{x}\big)$（次元 $N-m$）の基底**にとる。
+**核 $\ker\big((\mathbf A^{x})^{\dagger}\mathbf S^{x}\big)$（次元 $N-m$）の基底**にとる。
 
 MO 係数を $\mathbf C^x = \mathbf T^x \mathbf C_{\mathrm r}^x$ と縮約パラメータ化すると、任意の $\mathbf C_{\mathrm r}^x$ に対して
 
@@ -132,7 +131,7 @@ $\mathbf T^x$ を $S$-正規直交、すなわち
 \mathbf F_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x} = \mathbf C_{\mathrm r}^{x}\boldsymbol\varepsilon^{x} \qquad (8)
 ```
 
-実装上は $\ker\!\big((\mathbf A^{x})^{\dagger}\mathbf S^{x}\big)$ の基底に対して $S$-計量での Löwdin 直交化
+実装上は $\ker\big((\mathbf A^{x})^{\dagger}\mathbf S^{x}\big)$ の基底に対して $S$-計量での Löwdin 直交化
 （あるいは正準直交化）を施して $\mathbf T^x$ を得る。
 
 ---
