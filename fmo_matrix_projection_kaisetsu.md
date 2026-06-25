@@ -1,6 +1,6 @@
 # FMO境界処理における不要混成軌道の除去：レベルシフト射影と矩形変換
 
-> 想定読者：Hartree–Fock / Roothaan–Hall 法（$\mathbf{FC}=\mathbf{SC}\boldsymbol\varepsilon$、密度行列、一般化固有値問題、射影演算子）を理解している方。
+> 想定読者：Hartree–Fock / Roothaan–Hall 法（ $\mathbf{FC}=\mathbf{SC}\boldsymbol\varepsilon$、密度行列、一般化固有値問題、射影演算子）を理解している方。
 > FMO のフラグメント境界処理において、切断結合方向の混成軌道を変分空間から除去する2つの方法
 > ——(i) 巨大レベルシフトによる射影、(ii) 矩形変換による厳密 deflation——を対比し、両者が
 > $B\to\infty$ 極限で一致することを示す。式番号は本ノート内で完結する通し番号 (1)–(8)。
@@ -15,15 +15,15 @@ FMO では共有結合を跨いでフラグメント分割するため、結合�
 **変分空間から排除**する必要がある。標準的手法は、これらに巨大なレベルシフトを与える
 射影（hybrid orbital projection, HOP）である。
 
-記号：$\mathbf H^x$ コアハミルトニアン、$\mathbf V^x$ 環境静電ポテンシャル（他フラグメントの ESP）、
-$\mathbf S^x$ AO 重なり行列、$\mathbf A^x$ は $\varphi_i^{h}=\sum_\mu A^x_{\mu i}\chi_\mu$ の展開係数を列に持つ
-$N\times m$ 行列（$m$ は除去本数）、$\mathbf B=\mathrm{diag}(B_i)$ レベルシフト。
+記号： $\mathbf H^x$ コアハミルトニアン、 $\mathbf V^x$ 環境静電ポテンシャル（他フラグメントの ESP）、
+$\mathbf S^x$ AO 重なり行列、 $\mathbf A^x$ は $\varphi_i^{h}=\sum_\mu A^x_{\mu i}\chi_\mu$ の展開係数を列に持つ
+$N\times m$ 行列（ $m$ は除去本数）、 $\mathbf B=\mathrm{diag}(B_i)$ レベルシフト。
 
 ---
 
 ## 2. レベルシフト射影（式1）
 
-成分表示（$\mu,\nu$ は AO 添字）：
+成分表示（ $\mu,\nu$ は AO 添字）：
 
 ```math
 \widetilde{H}^{x}_{\mu\nu} = H^{x}_{\mu\nu} + V^{x}_{\mu\nu} + \sum_i B_i \langle \mu | \varphi_i^{h} \rangle \langle \varphi_i^{h} | \nu \rangle \qquad (1)
@@ -52,14 +52,14 @@ $B$ を上げると $\widetilde{\mathbf F}^x$ の条件数が悪化し、SCF 収
 
 ## 4. 矩形変換による厳密 deflation（式2）
 
-許容空間（$\{\varphi_i^{h}\}$ と $S$-直交する部分空間）を張る矩形行列
+許容空間（ $\{\varphi_i^{h}\}$ と $S$-直交する部分空間）を張る矩形行列
 $\mathbf T^x\in\mathbb{R}^{N\times(N-m)}$ を、
 
 ```math
 (\mathbf A^{x})^{\dagger}\mathbf S^{x}\mathbf T^{x} = \mathbf 0 \qquad (2)
 ```
 
-を満たすように構成する。すなわち $\mathbf T^x$ の列は、$m\times N$ 行列 $(\mathbf A^{x})^{\dagger}\mathbf S^{x}$ の
+を満たすように構成する。すなわち $\mathbf T^x$ の列は、 $m\times N$ 行列 $(\mathbf A^{x})^{\dagger}\mathbf S^{x}$ の
 **核 $\ker\!\big((\mathbf A^{x})^{\dagger}\mathbf S^{x}\big)$（次元 $N-m$）の基底**にとる。
 
 MO 係数を $\mathbf C^x = \mathbf T^x \mathbf C_{\mathrm r}^x$ と縮約パラメータ化すると、任意の $\mathbf C_{\mathrm r}^x$ に対して
@@ -80,7 +80,7 @@ MO 係数を $\mathbf C^x = \mathbf T^x \mathbf C_{\mathrm r}^x$ と縮約パラ
 (\mathbf T^x)^{\dagger}\widetilde{\mathbf H}^{x}\mathbf T^x = (\mathbf T^x)^{\dagger}(\mathbf H^x+\mathbf V^x)\mathbf T^x + \big[(\mathbf A^x)^{\dagger}\mathbf S^x\mathbf T^x\big]^{\dagger}\mathbf B\,\big[(\mathbf A^x)^{\dagger}\mathbf S^x\mathbf T^x\big]
 ```
 
-第2項は式(2)より厳密に $\mathbf 0$。$\mathbf B$ の大きさに依らず消える。したがって
+第2項は式(2)より厳密に $\mathbf 0$。 $\mathbf B$ の大きさに依らず消える。したがって
 
 ```math
 \mathbf H_{\mathrm r}^{x} = (\mathbf T^x)^{\dagger}\left(\mathbf H^x+\mathbf V^x\right)\mathbf T^x \qquad (3)
@@ -170,10 +170,10 @@ Fock 構築後の対角化コストもこの縮約次元で評価される。
 |------|------|
 | $\mathbf H^x,\ \mathbf V^x$ | コアハミルトニアン、環境 ESP |
 | $\mathbf S^x$ | AO 重なり行列 |
-| $\mathbf A^x$ | 除去混成軌道 $\varphi_i^h$ の AO 係数（$N\times m$、列ベクトル） |
+| $\mathbf A^x$ | 除去混成軌道 $\varphi_i^h$ の AO 係数（ $N\times m$、列ベクトル） |
 | $\mathbf B=\mathrm{diag}(B_i)$ | レベルシフト |
 | $\mathbf P^x=\mathbf S^x\mathbf A^x\mathbf B(\mathbf A^x)^\dagger\mathbf S^x$ | AO 表現の射影項 |
-| $\mathbf T^x$ | 矩形変換行列（$N\times(N-m)$、$\ker((\mathbf A^x)^\dagger\mathbf S^x)$ の基底） |
+| $\mathbf T^x$ | 矩形変換行列（ $N\times(N-m)$、 $\ker((\mathbf A^x)^\dagger\mathbf S^x)$ の基底） |
 | $\mathbf C^x,\ \mathbf C_{\mathrm r}^x$ | MO 係数（元空間 / 縮約空間） |
 | $\mathbf F^x,\ \mathbf G^x[\mathbf D^x]$ | Fock 行列、二電子部分 |
 | $\mathbf D^x,\ \mathbf D_{\mathrm r}^x$ | 密度行列（元 / 縮約） |
