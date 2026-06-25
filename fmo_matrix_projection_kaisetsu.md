@@ -77,7 +77,7 @@ FMO法の発想はとてもシンプルです。
 
 従来法の中心となる式がこれです。
 
-$$
+```math
 \widetilde{\mathbf H}^{x}
 =
 \mathbf H^{x}+\mathbf V^{x}
@@ -85,7 +85,7 @@ $$
 \mathbf S^{x}\mathbf A^{x}\mathbf B
 (\mathbf A^{x})^\dagger\mathbf S^{x}
 \tag{1}
-$$
+```
 
 記号の意味：
 
@@ -103,9 +103,9 @@ $$
 
 問題は後半の長い項：
 
-$$
+```math
 \mathbf S^{x}\mathbf A^{x}\mathbf B(\mathbf A^{x})^\dagger\mathbf S^{x}
-$$
+```
 
 これは **「いらない軌道（$\mathbf A^x$）にだけ、巨大なエネルギー $\mathbf B$ を上乗せする」**
 という仕掛けです。専門的には **射影項（しゃえいこう, projection term）** と呼びます。
@@ -120,9 +120,9 @@ $$
 
 これが従来法（レベルシフト法）です。後述するように、典型的には
 
-$$
+```math
 B = 10^{6}\ E_{\mathrm h}
-$$
+```
 
 （$E_{\mathrm h}$ はエネルギーの単位「ハートリー」）といった巨大な値を使います。
 
@@ -150,10 +150,10 @@ $$
 
 ### 式(2)：いらない軌道と「直交する」空間を作る
 
-$$
+```math
 (\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x=0
 \tag{2}
-$$
+```
 
 この式は、見た目は難しいですが、言っていることは1つだけ：
 
@@ -168,10 +168,10 @@ $$
 
 ### 式(3)：新しい間取り図の上で計算する
 
-$$
+```math
 \mathbf C^x=\mathbf T^x\mathbf C_{\mathrm r}^x
 \tag{3}
-$$
+```
 
 - $\mathbf C^x$：本来のMO係数（電子の住み方の設計図）。
 - $\mathbf C_{\mathrm r}^x$：**いらない部屋を消した、縮小版の設計図**（添字 r は reduced＝縮小の意味）。
@@ -182,9 +182,9 @@ $$
 ポイントは、**縮小版の設計図をどう作っても**（どんな $\mathbf C_{\mathrm r}^x$ を選んでも）、
 式(2)のおかげで
 
-$$
+```math
 (\mathbf A^x)^\dagger\mathbf S^x\mathbf C^x=0
-$$
+```
 
 が自動的に成り立つこと。つまり **「うっかり、いらない軌道を使ってしまう」ことが
 原理的に起こらない**。立ち入り禁止が完璧に保証されます。
@@ -198,7 +198,7 @@ $$
 新しい間取り図 $\mathbf T^x$ の上に式(1)を「乗せ替える」操作をします
 （専門用語で **合同変換**。要は「新しい座標系で書き直す」こと）。
 
-$$
+```math
 (\mathbf T^x)^\dagger
 \widetilde{\mathbf H}^{x}
 \mathbf T^x
@@ -211,11 +211,11 @@ $$
 \mathbf S^x\mathbf A^x\mathbf B
 (\mathbf A^x)^\dagger\mathbf S^x
 \mathbf T^x}_{\text{この射影項が…}}
-$$
+```
 
 ここで、あの厄介だった**射影項（高い値札の項）**を計算すると：
 
-$$
+```math
 \begin{aligned}
 &(\mathbf T^x)^\dagger
 \mathbf S^x\mathbf A^x\mathbf B
@@ -227,7 +227,7 @@ $$
 \underbrace{\left[(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x\right]}_{=\,0\ \text{(式2より)}}\\
 &=0
 \end{aligned}
-$$
+```
 
 何が起きたかというと：
 
@@ -242,7 +242,7 @@ $$
 
 こうして式(1)は、すっきりこうなります。
 
-$$
+```math
 \boxed{
 \mathbf H_{\mathrm r}^{x}
 =
@@ -251,22 +251,22 @@ $$
 \mathbf T^x
 }
 \tag{4}
-$$
+```
 
 つまり：
 
-$$
+```math
 \sum_i B_i|\phi_i^h\rangle\langle\phi_i^h|
 \quad(\text{巨大な値札の項})
-$$
+```
 
 という厄介な項は **完全に不要**になり、代わりに
 
-$$
+```math
 \boxed{
 (\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x=0
 }
-$$
+```
 
 という **「いらない軌道は最初から土俵にない」という約束（拘束条件＝式(2)）** を、
 変換行列 $\mathbf T^x$ にあらかじめ組み込んでおくだけでよくなります。
@@ -285,38 +285,38 @@ $$
 ことで行います。新しい方法では、その方程式も**すべて縮小版**に置き換わります。
 やっていることは「全部 $\mathbf T^x$ で挟んで小さくする」だけです。
 
-$$
+```math
 \mathbf F_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x}
 =
 \mathbf S_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x}
 \boldsymbol\varepsilon^{x}
 \tag{5}
-$$
+```
 
 各部品（添字 r はすべて「縮小版」）：
 
-$$
+```math
 \mathbf S_{\mathrm r}^{x}=(\mathbf T^x)^\dagger\mathbf S^x\mathbf T^x
 \tag{6}
-$$
+```
 （重なり行列の縮小版）
 
-$$
+```math
 \mathbf F_{\mathrm r}^{x}=(\mathbf T^x)^\dagger
 \left[\mathbf H^x+\mathbf V^x+\mathbf G^x[\mathbf D^x]\right]\mathbf T^x
 \tag{7}
-$$
+```
 （Fock行列の縮小版。$\mathbf G^x[\mathbf D^x]$ は電子どうしの反発から作る項）
 
-$$
+```math
 \mathbf D^x=\mathbf T^x\mathbf D_{\mathrm r}^{x}(\mathbf T^x)^\dagger
 \tag{8}
-$$
+```
 （縮小版の結果を、元の世界に戻す式。電子密度の変換）
 
-$$
+```math
 \boldsymbol\varepsilon^{x}
-$$
+```
 はエネルギー準位（各軌道のエネルギー）です。
 
 要点：**「$(\mathbf T^x)^\dagger \cdots \mathbf T^x$」で挟む ＝ いらない部屋を外した世界に書き直す**。
@@ -329,10 +329,10 @@ $$
 $\mathbf T^x$ を作るとき、新しい部屋たちを **きれいに整える**（互いに重ならず、
 大きさ1にそろえる）と、計算がさらに楽になります。これを **S-正規直交化** と言います。
 
-$$
+```math
 (\mathbf T^x)^\dagger\mathbf S^x\mathbf T^x=\mathbf I
 \tag{9}
-$$
+```
 
 ここで $\mathbf I$ は単位行列（「対角線が1、ほかは0」の、いちばん素直な表）。
 これは「重なり行列が消えて、ただの“何もない状態”になった」という意味です。
@@ -340,14 +340,14 @@ $$
 すると方程式(5)から重なり行列 $\mathbf S_{\mathrm r}^x$ が消えて、いちばん解きやすい
 **普通の固有値問題**になります：
 
-$$
+```math
 \boxed{
 \mathbf F_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x}
 =
 \mathbf C_{\mathrm r}^{x}\boldsymbol\varepsilon^{x}
 }
 \tag{10}
-$$
+```
 
 > 専門的に言えば「一般化固有値問題 → 標準固有値問題」への単純化。
 > 計算機にとって解きやすい、きれいな形になった、というご利益です。
@@ -362,18 +362,18 @@ $$
 タンパク質などをC–C結合で切ると、**切断方向を向いた1本の腕**が宙ぶらりんになります。
 これが「いらない軌道」です。だから：
 
-$$
+```math
 4\ \text{本}\ \longrightarrow\ 3\ \text{本}
-$$
+```
 
 と、1本減らします（局所的にはこの縮小）。
 
 分子全体で見ると、もともとAO（部品）が $N$ 個あって、そこから独立な軌道を1本消すので、
 変換行列 $\mathbf T^x$ の形は：
 
-$$
+```math
 \mathbf T^x:\quad N\times(N-1)
-$$
+```
 
 つまり **縦 $N$・横 $N-1$ の長方形**になります。
 入り口は $N$ 個、出口は $N-1$ 個 ── **1つ少ない出口に押し込める**から長方形なのです。
@@ -381,9 +381,9 @@ $$
 
 結果として、計算で扱う部屋の数（変分空間の次元）は：
 
-$$
+```math
 N\ \longrightarrow\ N-1
-$$
+```
 
 と、ちょうど1つだけ減ります。「いらない1本」がきれいに消えた状態です。
 
@@ -393,13 +393,13 @@ $$
 
 最後に、従来法（式(1)）と新方法（式(4)）の関係です。
 
-$$
+```math
 \boxed{
 \text{矩形変換による切り取り}
 \quad\Longleftrightarrow\quad
 B\rightarrow+\infty
 }
-$$
+```
 
 これは次のことを言っています。
 
