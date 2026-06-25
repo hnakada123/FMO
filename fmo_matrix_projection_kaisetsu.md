@@ -78,13 +78,7 @@ FMO法の発想はとてもシンプルです。
 従来法の中心となる式がこれです。
 
 ```math
-\widetilde{\mathbf H}^{x}
-=
-\mathbf H^{x}+\mathbf V^{x}
-+
-\mathbf S^{x}\mathbf A^{x}\mathbf B
-(\mathbf A^{x})^\dagger\mathbf S^{x}
-\tag{1}
+\widetilde{\mathbf H}^{x} = \mathbf H^{x}+\mathbf V^{x} + \mathbf S^{x}\mathbf A^{x}\mathbf B (\mathbf A^{x})^\dagger\mathbf S^{x} \tag{1}
 ```
 
 記号の意味：
@@ -151,8 +145,7 @@ B = 10^{6}\ E_{\mathrm h}
 ### 式(2)：いらない軌道と「直交する」空間を作る
 
 ```math
-(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x=0
-\tag{2}
+(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x=0 \tag{2}
 ```
 
 この式は、見た目は難しいですが、言っていることは1つだけ：
@@ -169,8 +162,7 @@ B = 10^{6}\ E_{\mathrm h}
 ### 式(3)：新しい間取り図の上で計算する
 
 ```math
-\mathbf C^x=\mathbf T^x\mathbf C_{\mathrm r}^x
-\tag{3}
+\mathbf C^x=\mathbf T^x\mathbf C_{\mathrm r}^x \tag{3}
 ```
 
 - $\mathbf C^x$：本来のMO係数（電子の住み方の設計図）。
@@ -199,34 +191,13 @@ B = 10^{6}\ E_{\mathrm h}
 （専門用語で **合同変換**。要は「新しい座標系で書き直す」こと）。
 
 ```math
-(\mathbf T^x)^\dagger
-\widetilde{\mathbf H}^{x}
-\mathbf T^x
-=
-(\mathbf T^x)^\dagger
-(\mathbf H^x+\mathbf V^x)
-\mathbf T^x
-+
-\underbrace{(\mathbf T^x)^\dagger
-\mathbf S^x\mathbf A^x\mathbf B
-(\mathbf A^x)^\dagger\mathbf S^x
-\mathbf T^x}_{\text{この射影項が…}}
+(\mathbf T^x)^\dagger \widetilde{\mathbf H}^{x} \mathbf T^x = (\mathbf T^x)^\dagger (\mathbf H^x+\mathbf V^x) \mathbf T^x + \underbrace{(\mathbf T^x)^\dagger \mathbf S^x\mathbf A^x\mathbf B (\mathbf A^x)^\dagger\mathbf S^x \mathbf T^x}_{\text{この射影項が…}}
 ```
 
 ここで、あの厄介だった**射影項（高い値札の項）**を計算すると：
 
 ```math
-\begin{aligned}
-&(\mathbf T^x)^\dagger
-\mathbf S^x\mathbf A^x\mathbf B
-(\mathbf A^x)^\dagger\mathbf S^x
-\mathbf T^x\\
-&=
-\underbrace{\left[(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x\right]}_{=\,0\ \text{(式2より)}}^\dagger
-\ \mathbf B\
-\underbrace{\left[(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x\right]}_{=\,0\ \text{(式2より)}}\\
-&=0
-\end{aligned}
+\begin{aligned} &(\mathbf T^x)^\dagger \mathbf S^x\mathbf A^x\mathbf B (\mathbf A^x)^\dagger\mathbf S^x \mathbf T^x\\ &= \underbrace{\left[(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x\right]}_{=\,0\ \text{(式2より)}}^\dagger \ \mathbf B\ \underbrace{\left[(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x\right]}_{=\,0\ \text{(式2より)}}\\ &=0 \end{aligned}
 ```
 
 何が起きたかというと：
@@ -243,29 +214,19 @@ B = 10^{6}\ E_{\mathrm h}
 こうして式(1)は、すっきりこうなります。
 
 ```math
-\boxed{
-\mathbf H_{\mathrm r}^{x}
-=
-(\mathbf T^x)^\dagger
-\left(\mathbf H^x+\mathbf V^x\right)
-\mathbf T^x
-}
-\tag{4}
+\boxed{ \mathbf H_{\mathrm r}^{x} = (\mathbf T^x)^\dagger \left(\mathbf H^x+\mathbf V^x\right) \mathbf T^x } \tag{4}
 ```
 
 つまり：
 
 ```math
-\sum_i B_i|\phi_i^h\rangle\langle\phi_i^h|
-\quad(\text{巨大な値札の項})
+\sum_i B_i|\phi_i^h\rangle\langle\phi_i^h| \quad(\text{巨大な値札の項})
 ```
 
 という厄介な項は **完全に不要**になり、代わりに
 
 ```math
-\boxed{
-(\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x=0
-}
+\boxed{ (\mathbf A^x)^\dagger\mathbf S^x\mathbf T^x=0 }
 ```
 
 という **「いらない軌道は最初から土俵にない」という約束（拘束条件＝式(2)）** を、
@@ -286,31 +247,23 @@ B = 10^{6}\ E_{\mathrm h}
 やっていることは「全部 $\mathbf T^x$ で挟んで小さくする」だけです。
 
 ```math
-\mathbf F_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x}
-=
-\mathbf S_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x}
-\boldsymbol\varepsilon^{x}
-\tag{5}
+\mathbf F_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x} = \mathbf S_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x} \boldsymbol\varepsilon^{x} \tag{5}
 ```
 
 各部品（添字 r はすべて「縮小版」）：
 
 ```math
-\mathbf S_{\mathrm r}^{x}=(\mathbf T^x)^\dagger\mathbf S^x\mathbf T^x
-\tag{6}
+\mathbf S_{\mathrm r}^{x}=(\mathbf T^x)^\dagger\mathbf S^x\mathbf T^x \tag{6}
 ```
 （重なり行列の縮小版）
 
 ```math
-\mathbf F_{\mathrm r}^{x}=(\mathbf T^x)^\dagger
-\left[\mathbf H^x+\mathbf V^x+\mathbf G^x[\mathbf D^x]\right]\mathbf T^x
-\tag{7}
+\mathbf F_{\mathrm r}^{x}=(\mathbf T^x)^\dagger \left[\mathbf H^x+\mathbf V^x+\mathbf G^x[\mathbf D^x]\right]\mathbf T^x \tag{7}
 ```
 （Fock行列の縮小版。$\mathbf G^x[\mathbf D^x]$ は電子どうしの反発から作る項）
 
 ```math
-\mathbf D^x=\mathbf T^x\mathbf D_{\mathrm r}^{x}(\mathbf T^x)^\dagger
-\tag{8}
+\mathbf D^x=\mathbf T^x\mathbf D_{\mathrm r}^{x}(\mathbf T^x)^\dagger \tag{8}
 ```
 （縮小版の結果を、元の世界に戻す式。電子密度の変換）
 
@@ -330,8 +283,7 @@ $\mathbf T^x$ を作るとき、新しい部屋たちを **きれいに整える
 大きさ1にそろえる）と、計算がさらに楽になります。これを **S-正規直交化** と言います。
 
 ```math
-(\mathbf T^x)^\dagger\mathbf S^x\mathbf T^x=\mathbf I
-\tag{9}
+(\mathbf T^x)^\dagger\mathbf S^x\mathbf T^x=\mathbf I \tag{9}
 ```
 
 ここで $\mathbf I$ は単位行列（「対角線が1、ほかは0」の、いちばん素直な表）。
@@ -341,12 +293,7 @@ $\mathbf T^x$ を作るとき、新しい部屋たちを **きれいに整える
 **普通の固有値問題**になります：
 
 ```math
-\boxed{
-\mathbf F_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x}
-=
-\mathbf C_{\mathrm r}^{x}\boldsymbol\varepsilon^{x}
-}
-\tag{10}
+\boxed{ \mathbf F_{\mathrm r}^{x}\mathbf C_{\mathrm r}^{x} = \mathbf C_{\mathrm r}^{x}\boldsymbol\varepsilon^{x} } \tag{10}
 ```
 
 > 専門的に言えば「一般化固有値問題 → 標準固有値問題」への単純化。
@@ -394,11 +341,7 @@ N\ \longrightarrow\ N-1
 最後に、従来法（式(1)）と新方法（式(4)）の関係です。
 
 ```math
-\boxed{
-\text{矩形変換による切り取り}
-\quad\Longleftrightarrow\quad
-B\rightarrow+\infty
-}
+\boxed{ \text{矩形変換による切り取り} \quad\Longleftrightarrow\quad B\rightarrow+\infty }
 ```
 
 これは次のことを言っています。
