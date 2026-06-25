@@ -35,6 +35,49 @@ $\hat P=\sum_i B_i\,|\varphi_i^{h}\rangle\langle\varphi_i^{h}|$ の AO 表現で
 \widetilde{\mathbf H}^{x} = \mathbf H^{x} + \mathbf V^{x} + \mathbf S^{x}\mathbf A^{x}\mathbf B\,(\mathbf A^{x})^{\dagger}\mathbf S^{x} \qquad (1')
 ```
 
+### 成分表示 (1) から行列形 (1′) へ — なぜ重なり行列 $\mathbf S^x$ が2個現れるか
+
+行列形 (1′) の射影項には $\mathbf S^x$ が左右に2個現れる。これは **AO 基底が非直交であること**の帰結であり、射影項の左右の内積からそれぞれ1個ずつ湧く。順に追う。
+
+射影項の成分は
+
+```math
+P^{x}_{\mu\nu} = \sum_i B_i\,\langle \mu | \varphi_i^{h}\rangle\,\langle \varphi_i^{h} | \nu\rangle
+```
+
+で、 $|\mu\rangle=|\chi_\mu\rangle$ は AO 基底関数、 $|\varphi_i^{h}\rangle$ は除去対象の混成軌道である。混成軌道は AO の線形結合（展開係数が $\mathbf A^x$）で表される：
+
+```math
+|\varphi_i^{h}\rangle = \sum_\lambda A^{x}_{\lambda i}\,|\chi_\lambda\rangle
+```
+
+これをブラ側の内積に代入すると、 AO 同士の内積がそのまま重なり行列 $\langle\chi_\mu|\chi_\lambda\rangle = S^{x}_{\mu\lambda}$ になり、 **1個目の $\mathbf S^x$** が現れる：
+
+```math
+\langle \mu | \varphi_i^{h}\rangle = \sum_\lambda \langle\chi_\mu|\chi_\lambda\rangle\,A^{x}_{\lambda i} = \sum_\lambda S^{x}_{\mu\lambda} A^{x}_{\lambda i} = (\mathbf S^{x}\mathbf A^{x})_{\mu i}
+```
+
+ケット側の内積も同様に、 AO 同士の重なりから **2個目の $\mathbf S^x$** が現れる：
+
+```math
+\langle \varphi_i^{h} | \nu\rangle = \sum_\sigma A^{x*}_{\sigma i}\,\langle\chi_\sigma|\chi_\nu\rangle = \big((\mathbf A^{x})^{\dagger}\mathbf S^{x}\big)_{i\nu}
+```
+
+両者を合成し、 $B_i$ を対角に持つ $\mathbf B$ を挟むと、
+
+```math
+P^{x}_{\mu\nu} = \sum_i (\mathbf S^{x}\mathbf A^{x})_{\mu i}\,B_i\,\big((\mathbf A^{x})^{\dagger}\mathbf S^{x}\big)_{i\nu} = \big(\mathbf S^{x}\mathbf A^{x}\,\mathbf B\,(\mathbf A^{x})^{\dagger}\mathbf S^{x}\big)_{\mu\nu}
+```
+
+となり、行列形 $\mathbf P^x = \mathbf S^{x}\mathbf A^{x}\mathbf B(\mathbf A^{x})^{\dagger}\mathbf S^{x}$ を得る。これが (1) → (1′) の対応で、 $\mathbf S^x$ が2個現れる理由である。
+
+**本質**：演算子 $\hat P=\sum_i B_i|\varphi_i^{h}\rangle\langle\varphi_i^{h}|$ の AO 行列要素 $\langle\chi_\mu|\hat P|\chi_\nu\rangle$ を作るとき、左右の内積 $\langle\chi|\varphi^{h}\rangle$ が各1個の $\mathbf S^x$ を生む。もし AO 基底が正規直交（ $\mathbf S^x=\mathbf I$）であれば $\langle\mu|\varphi_i^{h}\rangle = A^{x}_{\mu i}$ となり、射影項は $\mathbf A^x\mathbf B(\mathbf A^x)^{\dagger}$ で $\mathbf S^x$ は出てこない。すなわち **2個の $\mathbf S^x$ は、 $\mathbf A^x$ が「非直交 AO 基底での展開係数」であることの代償**であり、係数を実際の内積（ブラケット）へ変換するために、ブラ側・ケット側の双方で $\mathbf S^x$ を要する。
+
+| 基底 | $\langle\mu\vert\varphi_i^{h}\rangle$ | 射影項 |
+|------|-----------------------------------|--------|
+| 正規直交（ $\mathbf S^x=\mathbf I$） | $A^{x}_{\mu i}$ | $\mathbf A^x\mathbf B(\mathbf A^x)^{\dagger}$ （ $\mathbf S^x$ なし） |
+| 非直交 AO（一般） | $(\mathbf S^x\mathbf A^x)_{\mu i}$ | $\mathbf S^x\mathbf A^x\mathbf B(\mathbf A^x)^{\dagger}\mathbf S^x$ |
+
 射影項 $\mathbf P^x=\mathbf S^{x}\mathbf A^{x}\mathbf B(\mathbf A^{x})^{\dagger}\mathbf S^{x}$ を Fock 行列に加えて Roothaan–Hall を解くと、
 $\{\varphi_i^{h}\}$ 方向の軌道エネルギーが $\sim B_i$ だけ持ち上がり、被占有空間から押し出される。
 典型的には $B_i = 10^{6}\,E_{\mathrm h}$ 程度を用いる。
