@@ -140,13 +140,19 @@ MO 係数を $\mathbf C^x = \mathbf T^x \mathbf C_{\mathrm r}^x$ と縮約パラ
 
 この係数 $C$ が変数で、これを動かしてエネルギーを下げるのが SCF である（係数をまとめた行列が $\mathbf C^x$）。本節がやりたいのは一言でいうと、**「 MO が“いらない混成軌道 $\varphi_i^h$ の方向”を絶対に使えないように、変数 $\mathbf C^x$ の取り方そのものを制限する」** ことである。
 
-**「いらない方向を使っていない」を式にする。** MO $\psi_p$ がいらない軌道 $\varphi_i^h$ を成分に含むかは、両者の重なり（内積）で測れる：
+**「いらない方向を使っていない」を式にする。** MO $\psi_p$ がいらない軌道 $\varphi_i^h$ を成分に含むかは、両者の重なり（内積）で測れる。MO といらない軌道はどちらも AO 展開で、
 
 ```math
-\langle \varphi_i^h \vert \psi_p\rangle = \big((\mathbf A^x)^\dagger \mathbf S^x \mathbf C^x\big)_{ip}
+\psi_p = \sum_\nu C_{\nu p}\,\chi_\nu, \qquad \varphi_i^h = \sum_\mu A^{x}_{\mu i}\,\chi_\mu
 ```
 
-（係数を実際の内積に直すのに $\mathbf S^x$ が要るのは、第2節の補足と同じ理由。）これが全部ゼロ、すなわち $(\mathbf A^x)^\dagger \mathbf S^x \mathbf C^x=\mathbf 0$ なら、「どの MO もいらない方向を1ミリも使っていない」という意味になる。これがゴールの数式（式2を $\mathbf C^x$ について言い換えたもの）である。
+なので、これらの内積を素直に展開すると：
+
+```math
+\langle \varphi_i^h | \psi_p\rangle = \Big\langle \sum_\mu A^{x}_{\mu i}\chi_\mu \,\Big| \sum_\nu C_{\nu p}\chi_\nu \Big\rangle = \sum_{\mu\nu} A^{x*}_{\mu i}\,\langle\chi_\mu|\chi_\nu\rangle\,C_{\nu p} = \sum_{\mu\nu} A^{x*}_{\mu i}\,S^{x}_{\mu\nu}\,C_{\nu p} = \big((\mathbf A^x)^\dagger \mathbf S^x \mathbf C^x\big)_{ip}
+```
+
+ここで AO 同士の内積が重なり行列 $\langle\chi_\mu|\chi_\nu\rangle=S^{x}_{\mu\nu}$ になり（第2節と同じく非直交性から $\mathbf S^x$ が現れる）、最後に二重和を行列積としてまとめた（複素共役と添字の入れ替えで $(\mathbf A^x)^\dagger$ が現れる）。これが全部ゼロ、すなわち $(\mathbf A^x)^\dagger \mathbf S^x \mathbf C^x=\mathbf 0$ なら、「どの MO もいらない方向を1ミリも使っていない」という意味になる。これがゴールの数式（式2を $\mathbf C^x$ について言い換えたもの）である。
 
 **2つの実現法。** いらない方向を使うと*エネルギーを罰する*のがレベルシフト（第2・3節、近似的）。これに対し本節は、いらない方向を*変数から消す*（厳密）。「罰する」のではなく「最初から選べないようにする」である。
 
