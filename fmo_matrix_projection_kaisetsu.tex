@@ -1,0 +1,659 @@
+% UTF-8 / upLaTeX source.
+% Compile example:
+%   uplatex fmo_matrix_projection_kaisetsu.tex
+%   dvipdfmx fmo_matrix_projection_kaisetsu.dvi
+
+\documentclass[uplatex,dvipdfmx,11pt]{jsarticle}
+
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\usepackage{array}
+\usepackage{longtable}
+
+\geometry{a4paper,margin=25mm}
+
+\newcommand{\Hcore}{\mathbf H}
+\newcommand{\Venv}{\mathbf V}
+\newcommand{\Smat}{\mathbf S}
+\newcommand{\Amat}{\mathbf A}
+\newcommand{\Bmat}{\mathbf B}
+\newcommand{\Tmat}{\mathbf T}
+\newcommand{\Cmat}{\mathbf C}
+\newcommand{\Cr}{\mathbf C_{\mathrm r}}
+\newcommand{\Fmat}{\mathbf F}
+\newcommand{\Fr}{\mathbf F_{\mathrm r}}
+\newcommand{\Sr}{\mathbf S_{\mathrm r}}
+\newcommand{\Dmat}{\mathbf D}
+\newcommand{\Dr}{\mathbf D_{\mathrm r}}
+\newcommand{\Gmat}{\mathbf G}
+
+\title{FMO境界処理と矩形変換による混成軌道の除去}
+\author{}
+\date{作成日: 2026年7月5日}
+
+\begin{document}
+\maketitle
+
+\section*{この文書の目的}
+
+FMO法で分子をフラグメントに分けたとき、切断した結合の方向を向いた
+「使ってはいけない混成軌道」を、どうやって計算から取り除くかを記述する。
+
+結論を先に言うと、従来のように大きなレベルシフト \(B\) でその軌道を無理に押し上げる
+必要はない。代わりに、最初からその方向を含まない小さい空間でSCFを解けばよい。
+この操作を、ここでは「矩形変換によるdeflation」と呼ぶ。
+
+\section{まず何が問題なのか}
+
+FMOはFragment Molecular Orbitalの略で、大きな分子をいくつかの小さなフラグメントに
+分けて量子化学計算を行う方法である。タンパク質や高分子のように、全体を一度に扱う
+のが重い系では、この考え方が重要になる。
+
+ただし、分子をフラグメントに分けるとき、共有結合を切ることがある。たとえば、炭素と
+炭素の単結合を途中で切って、左側をフラグメント \(x\)、右側を別のフラグメントにする
+状況である。
+
+共有結合を切ると、切断点には「もともと結合を作っていた方向」が残る。炭素が
+\(sp^3\) 混成している場合なら、4本の \(sp^3\) 混成軌道のうち、切った結合の方向を
+向いた1本が問題になる。
+
+模式的には次のような状況である。
+
+\begin{verbatim}
+Fragment x side                 Other fragment side
+
+   allowed directions -- C_alpha ---- [ cut-direction sp3 hybrid ]
+                                           ^
+                                  not allowed in x calculation
+\end{verbatim}
+
+この「切断方向の混成軌道」を、この文書では
+\[
+  \varphi_i^h
+\]
+と書く。複数本ある場合は \(i=1,2,\ldots\) と番号を付ける。
+
+フラグメント \(x\) の計算でこの軌道をそのまま使える状態にしておくと、フラグメント
+\(x\) の電子が、本来は相手フラグメント側に属する方向へ入り込んでしまう。これは
+物理的に望ましくない。
+
+したがって、FMOの境界処理では次のことを行う必要がある。
+
+\begin{quote}
+切断した結合の方向を向いた混成軌道を、フラグメントのSCF変分空間から取り除く。
+\end{quote}
+
+ここで「変分空間」とは、SCFが分子軌道を探すときに動かしてよい自由度の集合である。
+そこに不要な方向が残っていると、SCFはその方向も使ってしまう可能性がある。
+
+\section{最低限の量子化学の言葉}
+
+\subsection{AOとMO}
+
+量子化学計算では、分子軌道MOを原子軌道AOの線形結合として表す。
+\[
+  \psi_p = \sum_\mu C_{\mu p}\chi_\mu .
+\]
+ここで、\(\chi_\mu\) はAO、\(\psi_p\) はMO、\(C_{\mu p}\) はAOをどれだけ混ぜて
+MOを作るかを表す係数である。
+
+すべてのMO係数をまとめた行列を \(\Cmat\) と書く。SCFは、ざっくり言えば、この
+\(\Cmat\) を調整して電子のエネルギーを下げる手続きである。
+
+\subsection{AOは普通、直交していない}
+
+AO同士の重なりは
+\[
+  S_{\mu\nu} = \langle \chi_\mu | \chi_\nu \rangle
+\]
+で表す。これを集めたものが重なり行列 \(\Smat\) である。
+
+もしAOが完全に直交していれば \(\Smat=\mathbf I\) である。しかし実際の原子中心基底
+では、異なる原子上のAOも空間的に重なる。そのため、一般には
+\[
+  \Smat \ne \mathbf I
+\]
+である。この「AOが非直交である」という事実が、後で式に \(\Smat\) が何度も出てくる
+理由である。
+
+\subsection{除去したい混成軌道}
+
+切断方向の混成軌道もAOの線形結合で表せる。
+\[
+  \varphi_i^h = \sum_\mu A_{\mu i}\chi_\mu .
+\]
+この係数を列に並べた行列を \(\Amat\) と書く。AOの数を \(N\)、除去したい混成軌道の
+本数を \(m\) とすると、\(\Amat\) は \(N\times m\) の行列である。たとえば、
+切断方向の \(sp^3\) 混成軌道が1本だけなら \(m=1\) で、\(\Amat\) は1列のベクトルである。
+
+\section{「使ってはいけない方向を使っていない」とはどういう意味か}
+
+あるMO \(\psi_p\) が、除去したい混成軌道 \(\varphi_i^h\) を含んでいるかどうかは、
+両者の内積で見ればよい。
+\[
+  \langle \varphi_i^h | \psi_p \rangle .
+\]
+これがゼロなら、\(\psi_p\) は \(\varphi_i^h\) 方向の成分を持っていない。
+
+すべての除去対象 \(i\) とすべてのMO \(p\) についてゼロにしたいので、行列で書くと
+\[
+  \Amat^\dagger \Smat \Cmat = \mathbf 0
+\]
+である。
+
+ここに \(\Smat\) が入る理由は、AOが非直交だからである。実際、
+\begin{align*}
+\langle \varphi_i^h | \psi_p \rangle
+&=
+\left\langle
+\sum_\mu A_{\mu i}\chi_\mu
+\middle|
+\sum_\nu C_{\nu p}\chi_\nu
+\right\rangle \\
+&=
+\sum_{\mu\nu} A_{\mu i}^{*}
+\langle \chi_\mu | \chi_\nu \rangle
+C_{\nu p} \\
+&=
+\sum_{\mu\nu} A_{\mu i}^{*} S_{\mu\nu} C_{\nu p}.
+\end{align*}
+これを行列でまとめると \(\Amat^\dagger\Smat\Cmat\) になる。
+
+したがって、境界処理の数学的な目的は次の一行にまとめられる。
+\[
+  \boxed{\Amat^\dagger \Smat \Cmat = \mathbf 0}
+\]
+これは「どのMOも、切断方向の混成軌道を含まない」という意味である。
+
+\section{従来法: レベルシフトで押し上げる}
+
+従来の方法では、使ってはいけない軌道に非常に大きなエネルギーを与える。
+考え方は単純である。
+
+\begin{quote}
+その方向を使うとエネルギー的に大損するようにして、SCFがその方向を選ばないようにする。
+\end{quote}
+
+この方法をレベルシフト射影、またはhybrid orbital projectionと呼ぶ。
+
+コアハミルトニアンを \(\Hcore\)、環境静電ポテンシャルを \(\Venv\) とすると、
+レベルシフト込みの行列は次の形になる。
+\[
+  \widetilde{\Hcore}
+  =
+  \Hcore+\Venv+\Smat\Amat\Bmat\Amat^\dagger\Smat .
+\]
+ここで \(\Bmat\) は大きな正の値を並べた対角行列である。
+\[
+  \Bmat = \mathrm{diag}(B_1,B_2,\ldots,B_m).
+\]
+典型的には、\(B_i\) として非常に大きな値を入れる。これにより、
+\(\varphi_i^h\) 方向の軌道エネルギーが大きく上がり、被占有軌道から追い出されることを
+期待する。
+
+\subsection{\(\Smat\Amat\Bmat\Amat^\dagger\Smat\) という形になる理由}
+
+射影項の成分表示は
+\[
+  P_{\mu\nu}
+  =
+  \sum_i B_i
+  \langle \chi_\mu | \varphi_i^h \rangle
+  \langle \varphi_i^h | \chi_\nu \rangle
+\]
+である。
+
+混成軌道 \(\varphi_i^h\) はAO係数 \(\Amat\) で表されるが、AOは非直交である。そのため、
+\[
+  \langle \chi_\mu | \varphi_i^h \rangle
+  =
+  (\Smat\Amat)_{\mu i}
+\]
+となる。同様に右側の内積からも \(\Smat\) が出る。したがって、
+\[
+  \mathbf P = \Smat\Amat\Bmat\Amat^\dagger\Smat
+\]
+となる。
+
+もしAOが最初から直交していて \(\Smat=\mathbf I\) なら、射影項は単に
+\[
+  \Amat\Bmat\Amat^\dagger
+\]
+になる。つまり、左右に出てくる2つの \(\Smat\) は、非直交AOを使っていることの結果である。
+
+\section{レベルシフト法の弱点}
+
+\(B_i\) を大きくすれば、不要な混成軌道の成分は小さくなる。しかし、有限の \(B_i\) では
+完全にはゼロにならない。残る成分は大まかには
+\[
+  O(B^{-1})
+\]
+の大きさである。
+
+一方で、\(B_i\) を大きくしすぎると、行列の中に極端に大きな値が入る。すると条件数が
+悪化し、数値的に不安定になる。SCFの収束にも悪影響が出る可能性がある。
+
+\begin{center}
+\begin{tabular}{|p{0.22\linewidth}|p{0.34\linewidth}|p{0.34\linewidth}|}
+\hline
+\textbf{\(B\) の選び方} & \textbf{良い点} & \textbf{悪い点} \\
+\hline
+小さめ & 数値的には比較的安定 & 不要成分が残りやすい \\
+\hline
+大きめ & 不要成分は小さくなる & 条件数が悪化しやすい \\
+\hline
+無限大 & 理想的には完全除去 & 実際の計算では使えない \\
+\hline
+\end{tabular}
+\end{center}
+
+この問題を避けるには、そもそも \(B\) を使わない方法が必要である。
+
+\section{新しい考え方: 罰するのではなく、最初から選べなくする}
+
+レベルシフト法は「使ってはいけない方向を選んだら罰する」方法である。一方、矩形変換
+による方法では、発想を変える。
+
+\begin{quote}
+使ってはいけない方向を、変数の中から最初から消しておく。
+\end{quote}
+
+SCFが動かす変数はMO係数 \(\Cmat\) である。そこで、\(\Cmat\) を自由に直接動かすのでは
+なく、より小さい係数行列 \(\Cr\) を使って
+\[
+  \Cmat = \Tmat\Cr
+\]
+と表す。
+
+ここで \(\Tmat\) は \(N\times(N-m)\) の縦長の行列である。列数が \(N\) ではなく
+\(N-m\) なので、自由度が \(m\) 個減っている。このため「矩形変換」と呼ぶ。
+
+\(\Tmat\) は、次の条件を満たすように作る。
+\[
+  \boxed{\Amat^\dagger\Smat\Tmat=\mathbf 0}
+\]
+すると、
+\begin{align*}
+  \Amat^\dagger\Smat\Cmat
+  &=
+  \Amat^\dagger\Smat\Tmat\Cr \\
+  &=
+  \mathbf 0\,\Cr \\
+  &=
+  \mathbf 0 .
+\end{align*}
+これは非常に重要である。\(\Cr\) がどんな値になっても、できあがる
+\(\Cmat=\Tmat\Cr\) は必ず
+\[
+  \Amat^\dagger\Smat\Cmat=\mathbf 0
+\]
+を満たす。つまり、SCFがどのように進んでも、不要な混成軌道は最初から使えない。
+
+\section{\(\Tmat\) は何を表しているのか}
+
+\(\Tmat\) は、許された方向だけを並べた行列である。除去したい方向を表す条件は
+\[
+  \Amat^\dagger\Smat\mathbf v=\mathbf 0
+\]
+である。これを満たすベクトル \(\mathbf v\) は、除去したい混成軌道と \(\Smat\) の意味で
+直交している。
+
+このような \(\mathbf v\) 全体の空間を
+\[
+  \ker(\Amat^\dagger\Smat)
+\]
+と書く。\(\ker\) はkernel、つまり核または零空間である。
+
+\(\Tmat\) の列は、この核を張る基底である。言い換えると、\(\Tmat\) は「不要な混成軌道と
+直交する方向だけを並べた行列」である。
+
+AO空間全体の次元が \(N\)、取り除く混成軌道が \(m\) 本なら、残る許容空間の次元は
+\[
+  N-m
+\]
+である。そのため、\(\Tmat\) は \(N\times(N-m)\) の行列になる。
+
+\section{直感的なたとえ}
+
+2つの方法の違いは、次のように考えると分かりやすい。
+
+\begin{center}
+\begin{tabular}{|p{0.22\linewidth}|p{0.35\linewidth}|p{0.33\linewidth}|}
+\hline
+\textbf{方法} & \textbf{たとえ} & \textbf{何が起きるか} \\
+\hline
+レベルシフト & 入ってはいけない道に高い坂を作る & 坂が有限なら、少しは入り込む可能性がある \\
+\hline
+矩形変換 & 地図からその道を消す & そもそもその方向へ進めない \\
+\hline
+\end{tabular}
+\end{center}
+
+レベルシフトは「罰する」方法である。矩形変換は「選択肢から消す」方法である。この違いに
+より、矩形変換では不要成分が原理的にゼロになる。
+
+\section{矩形変換を使うとレベルシフト項は消える}
+
+レベルシフト込みの行列は
+\[
+  \widetilde{\Hcore}
+  =
+  \Hcore+\Venv+\Smat\Amat\Bmat\Amat^\dagger\Smat
+\]
+であった。これを許された空間へ変換する。つまり、左から \(\Tmat^\dagger\)、右から
+\(\Tmat\) を掛ける。
+\begin{align*}
+\Tmat^\dagger\widetilde{\Hcore}\Tmat
+&=
+\Tmat^\dagger(\Hcore+\Venv)\Tmat \\
+&\quad+
+\Tmat^\dagger\Smat\Amat\Bmat\Amat^\dagger\Smat\Tmat .
+\end{align*}
+第2項は次のように書き換えられる。
+\begin{align*}
+&\Tmat^\dagger\Smat\Amat\Bmat\Amat^\dagger\Smat\Tmat \\
+&\quad=
+(\Amat^\dagger\Smat\Tmat)^\dagger
+\Bmat
+(\Amat^\dagger\Smat\Tmat).
+\end{align*}
+しかし、\(\Tmat\) は
+\[
+  \Amat^\dagger\Smat\Tmat=\mathbf 0
+\]
+を満たすように作っている。したがって、
+\[
+  (\Amat^\dagger\Smat\Tmat)^\dagger
+  \Bmat
+  (\Amat^\dagger\Smat\Tmat)
+  =
+  \mathbf 0
+\]
+である。
+
+よって、縮約空間で使う行列は
+\[
+  \boxed{
+  \mathbf H_{\mathrm r}
+  =
+  \Tmat^\dagger(\Hcore+\Venv)\Tmat
+  }
+\]
+になる。ここには、もう \(B\) が出てこない。
+
+これは偶然ではない。\(B\) が担当していた「不要な方向を排除する」という役割を、
+\(\Tmat\) の条件
+\[
+  \Amat^\dagger\Smat\Tmat=\mathbf 0
+\]
+が完全に引き受けたからである。
+
+\section{縮約空間でのSCF方程式}
+
+通常のRoothaan--Hall方程式は、AOが非直交なので一般化固有値問題になる。矩形変換後は、
+縮約空間で次の式を解く。
+\[
+  \Fr\Cr=\Sr\Cr\boldsymbol\varepsilon .
+\]
+ここで、
+\[
+  \Sr=\Tmat^\dagger\Smat\Tmat
+\]
+であり、
+\[
+  \Fr
+  =
+  \Tmat^\dagger
+  \left[
+    \Hcore+\Venv+\Gmat[\Dmat]
+  \right]
+  \Tmat
+\]
+である。\(\Gmat[\Dmat]\) は二電子項、つまりCoulomb項とexchange項を表す。
+
+密度行列も縮約空間から元のAO空間へ戻して使う。
+\[
+  \Dmat = \Tmat\Dr\Tmat^\dagger .
+\]
+このようにしておけば、二電子積分やFock行列の構築は元のAO空間の量として扱いつつ、
+SCFの自由度だけを \(N-m\) 次元に減らせる。
+
+\section{\(S\)-正規直交化}
+
+\(\Tmat\) の列は、除去したい軌道と \(\Smat\) の意味で直交していれば十分である。ただし、
+そのままだと縮約空間の重なり行列
+\[
+  \Sr=\Tmat^\dagger\Smat\Tmat
+\]
+が単位行列にならないことがある。
+
+そこで、\(\Tmat\) の列を \(\Smat\) の計量で正規直交化して、
+\[
+  \Tmat^\dagger\Smat\Tmat=\mathbf I
+\]
+となるようにできる。この場合、縮約空間のSCF方程式は
+\[
+  \Fr\Cr=\Cr\boldsymbol\varepsilon
+\]
+という普通の固有値問題になる。
+
+実装では、まず
+\[
+  \ker(\Amat^\dagger\Smat)
+\]
+の基底を求め、それに対してLoewdin直交化や正準直交化を行って \(\Tmat\) を作る。
+
+\section{\(sp^3\) 炭素での具体例}
+
+炭素の価電子AOを単純化して
+\[
+  s,\quad p_x,\quad p_y,\quad p_z
+\]
+の4つだけとする。この4つから、4本の \(sp^3\) 混成軌道を作れる。
+
+理想的な場合、たとえば次のように書ける。
+\begin{align*}
+h_1 &= \frac12(s+p_x+p_y+p_z), \\
+h_2 &= \frac12(s+p_x-p_y-p_z), \\
+h_3 &= \frac12(s-p_x+p_y-p_z), \\
+h_4 &= \frac12(s-p_x-p_y+p_z).
+\end{align*}
+
+もし切断した結合の方向が \(h_1\) なら、フラグメント \(x\) の計算では \(h_1\) を
+使わせたくない。このとき、許される方向は \(h_2,h_3,h_4\) である。局所的には
+\[
+  4\to 3
+\]
+の次元削減が起きる。
+
+この単純な直交基底の例では、炭素上の変換行列は
+\[
+\Tmat_{\mathrm C}
+=
+\begin{array}{c|ccc}
+ & h_2 & h_3 & h_4\\
+\hline
+s   & \frac12 & \frac12  & \frac12 \\
+p_x & \frac12 & -\frac12 & -\frac12 \\
+p_y & -\frac12 & \frac12 & -\frac12 \\
+p_z & -\frac12 & -\frac12 & \frac12
+\end{array}
+\]
+である。
+
+この \(\Tmat_{\mathrm C}\) は、\(h_1\) の列を落として、残りの3本だけを並べたものだと
+考えられる。
+
+実際の計算では、基底はもっと大きく、AOも非直交である。そのため、係数はこのような
+きれいな \(1/2\) にはならない。現実には \(\Smat\) を使って
+\[
+  \Amat^\dagger\Smat\Tmat=\mathbf 0
+\]
+を満たすように \(\Tmat\) を作る。それでも、「切断方向の1本を除き、残りの許された方向
+だけでMOを作る」という考え方は同じである。
+
+\section{\(d\) 軌道の \(6\to5\) 変換との似ている点と違う点}
+
+量子化学では、カーテシアン \(d\) 関数6個から、球面調和 \(d\) 関数5個へ変換することが
+ある。これも \(6\to5\) の次元削減なので、形だけ見ると矩形変換に似ている。
+ただし、意味は違う。
+
+\begin{center}
+\begin{tabular}{|p{0.18\linewidth}|p{0.36\linewidth}|p{0.36\linewidth}|}
+\hline
+\textbf{比較項目} & \textbf{カーテシアン \(d\) から球面 \(d\)} & \textbf{FMO境界の矩形変換} \\
+\hline
+次元 & \(6\to5\) & \(N\to N-m\) \\
+\hline
+落とすもの & \(d\) 関数に混じる冗長な \(s\) 的成分 & 切断結合方向の混成軌道 \\
+\hline
+行列の決まり方 & 角運動量で決まるほぼ普遍的な変換 & 結合方向、\(\Amat\)、\(\Smat\) に依存 \\
+\hline
+目的 & 基底関数の表現を整理する & フラグメント境界の不要成分を除去する \\
+\hline
+\end{tabular}
+\end{center}
+
+どちらも「長方形の行列で次元を減らす」という点では似ている。しかし、FMO境界処理の
+\(\Tmat\) は、系ごとに決まる物理的な拘束を入れるための行列である。
+
+\section{レベルシフト法との関係}
+
+矩形変換による方法は、レベルシフト法と無関係な別手法ではない。むしろ、次のように
+理解できる。
+\[
+  \boxed{\text{deflation}\ \Longleftrightarrow\ B\to\infty}
+\]
+つまり、矩形変換はレベルシフト法の \(B\to\infty\) 極限に対応する。
+
+レベルシフト法では、\(B\) を大きくするほど不要な軌道の成分が小さくなる。理想的には
+\(B\) を無限大にすれば完全に除去できる。しかし、実際の数値計算で無限大の \(B\) は
+使えない。非常に大きな有限値を使うと、条件数が悪くなる。
+
+矩形変換は、この「\(B\) を無限大にした理想状態」を、実際には \(B\) を使わずに実現する。
+そのため、「レベルシフト \(B\) をどの値にするか」という調整問題そのものが消える。
+
+\section{両者の比較}
+
+\begin{center}
+\begin{tabular}{|p{0.18\linewidth}|p{0.36\linewidth}|p{0.36\linewidth}|}
+\hline
+\textbf{項目} & \textbf{レベルシフト射影} & \textbf{矩形変換によるdeflation} \\
+\hline
+基本発想 & 不要方向をエネルギー的に罰する & 不要方向を変数から消す \\
+\hline
+使う条件 & Fock行列に \(\Smat\Amat\Bmat\Amat^\dagger\Smat\) を足す &
+\(\Amat^\dagger\Smat\Tmat=\mathbf 0\) を満たす \(\Tmat\) を使う \\
+\hline
+\(B\) & 必要 & 不要 \\
+\hline
+除去の正確さ & 有限 \(B\) では近似的 & 原理的に厳密 \\
+\hline
+残留成分 & およそ \(O(B^{-1})\) & 機械精度でゼロ \\
+\hline
+次元 & \(N\) のまま & \(N-m\) \\
+\hline
+数値安定性 & 大きな \(B\) で条件数が悪化しうる & \(B\) による条件数悪化がない \\
+\hline
+見方 & \(B\) を大きくして追い出す & \(B\to\infty\) 極限を有限の変換で実現する \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{実装の流れ}
+
+実装するなら、流れは次のようになる。
+\begin{enumerate}
+\item 切断した結合方向の混成軌道をAO係数として作る: \(\Amat\)。
+\item AO重なり行列を用意する: \(\Smat\)。
+\item 次の核を張る基底を求める: \(\ker(\Amat^\dagger\Smat)\)。
+\item その基底を必要に応じて \(\Smat\)-正規直交化し、
+      \(\Tmat^\dagger\Smat\Tmat=\mathbf I\) を満たす \(\Tmat\) を作る。
+\item Fock行列や重なり行列を縮約空間へ変換する:
+      \[
+        \Fr=\Tmat^\dagger\Fmat\Tmat,\qquad
+        \Sr=\Tmat^\dagger\Smat\Tmat .
+      \]
+\item 縮約空間でSCF方程式
+      \[
+        \Fr\Cr=\Sr\Cr\boldsymbol\varepsilon
+      \]
+      を解く。
+\item 必要に応じて元のAO空間のMO係数や密度に戻す:
+      \[
+        \Cmat=\Tmat\Cr,\qquad
+        \Dmat=\Tmat\Dr\Tmat^\dagger .
+      \]
+\end{enumerate}
+この流れでは、レベルシフト \(B\) はどこにも登場しない。
+
+\section{まとめ}
+
+FMOでは、共有結合を切ってフラグメントを作るため、切断方向の混成軌道をそのフラグメント
+のSCFから取り除く必要がある。
+
+従来のレベルシフト法は、不要な混成軌道に大きなエネルギー \(B\) を与えて、被占有軌道
+から追い出す。しかし、有限の \(B\) では不要成分が完全には消えず、\(B\) を大きくしすぎると
+数値的に不安定になる。
+
+矩形変換では、不要な混成軌道と \(\Smat\)-直交する空間だけを張る行列 \(\Tmat\) を作り、
+\[
+  \Cmat=\Tmat\Cr
+\]
+と置く。このとき
+\[
+  \Amat^\dagger\Smat\Tmat=\mathbf 0
+\]
+なので、どんな \(\Cr\) を使っても
+\[
+  \Amat^\dagger\Smat\Cmat=\mathbf 0
+\]
+が成り立つ。したがって、不要な混成軌道は最初からMOに混ざらない。
+
+この方法は、レベルシフト法の \(B\to\infty\) 極限を、\(B\) を使わずに有限の行列操作で
+実現するものである。結果として、レベルシフトの値を調整する必要がなくなり、残留成分と
+条件数悪化のトレードオフも避けられる。
+
+\section*{記号一覧}
+
+\begin{longtable}{|p{0.28\linewidth}|p{0.62\linewidth}|}
+\hline
+\textbf{記号} & \textbf{意味} \\
+\hline
+\(\Hcore\) & コアハミルトニアン \\
+\hline
+\(\Venv\) & 他フラグメントなどから来る環境静電ポテンシャル \\
+\hline
+\(\Smat\) & AO重なり行列 \\
+\hline
+\(\chi_\mu\) & AO基底関数 \\
+\hline
+\(\psi_p\) & MO \\
+\hline
+\(\Cmat\) & 元のAO空間でのMO係数 \\
+\hline
+\(\Cr\) & 縮約空間でのMO係数 \\
+\hline
+\(\varphi_i^h\) & 除去したい混成軌道 \\
+\hline
+\(\Amat\) & 除去したい混成軌道のAO係数 \\
+\hline
+\(m\) & 除去したい混成軌道の本数 \\
+\hline
+\(N\) & AO基底関数の数 \\
+\hline
+\(\Bmat\) & レベルシフト行列 \\
+\hline
+\(\Tmat\) & 許容空間だけを張る矩形変換行列 \\
+\hline
+\(\Fmat\) & Fock行列 \\
+\hline
+\(\Gmat[\Dmat]\) & 二電子項 \\
+\hline
+\(\Dmat\) & 密度行列 \\
+\hline
+\(\boldsymbol\varepsilon\) & 軌道エネルギー \\
+\hline
+\end{longtable}
+
+\end{document}
