@@ -1,0 +1,935 @@
+% UTF-8 / pdfLaTeX source.
+% Compile example:
+%   pdflatex fmo_matrix_projection_explained.tex
+
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\usepackage{array}
+\usepackage{longtable}
+
+\geometry{a4paper,margin=25mm}
+
+\newcommand{\Hcore}{\mathbf H}
+\newcommand{\Venv}{\mathbf V}
+\newcommand{\Smat}{\mathbf S}
+\newcommand{\Amat}{\mathbf A}
+\newcommand{\Bmat}{\mathbf B}
+\newcommand{\Tmat}{\mathbf T}
+\newcommand{\Cmat}{\mathbf C}
+\newcommand{\Cr}{\mathbf C_{\mathrm r}}
+\newcommand{\Fmat}{\mathbf F}
+\newcommand{\Fr}{\mathbf F_{\mathrm r}}
+\newcommand{\Sr}{\mathbf S_{\mathrm r}}
+\newcommand{\Dmat}{\mathbf D}
+\newcommand{\Dr}{\mathbf D_{\mathrm r}}
+\newcommand{\Gmat}{\mathbf G}
+
+\title{FMO Boundary Treatment and the Removal of Hybrid Orbitals\\
+by a Rectangular Transformation}
+\author{}
+\date{Created: July 5, 2026}
+
+\begin{document}
+\maketitle
+
+\section*{Purpose of this document}
+
+When a molecule is divided into fragments in the FMO method, a
+``forbidden hybrid orbital'' pointing along a severed bond remains at the
+cut. This document describes how to remove that orbital from the
+calculation.
+
+Stating the conclusion first: there is no need to push the orbital up
+with a large level shift \(B\), as is done conventionally. Instead, one
+can solve the SCF from the outset in a smaller space that does not
+contain that direction. We call this operation ``deflation by a
+rectangular transformation.''
+
+\section{What is the problem in the first place?}
+
+FMO stands for Fragment Molecular Orbital. It is a method that performs
+quantum chemical calculations by dividing a large molecule into several
+small fragments. For systems such as proteins and polymers, which are
+too heavy to treat as a whole, this idea becomes essential.
+
+However, when a molecule is divided into fragments, covalent bonds may
+be severed. For example, one may cut a carbon--carbon single bond in the
+middle, assigning the left side to fragment \(x\) and the right side to
+another fragment.
+
+When a covalent bond is severed, the ``direction that originally formed
+the bond'' remains at the cut point. If the carbon is \(sp^3\)
+hybridized, the problem is the one hybrid orbital, out of the four
+\(sp^3\) hybrids, that points along the severed bond.
+
+Schematically, the situation is as follows.
+
+\begin{verbatim}
+Fragment x side                 Other fragment side
+
+   allowed directions -- C_alpha ---- [ cut-direction sp3 hybrid ]
+                                           ^
+                                  not allowed in x calculation
+\end{verbatim}
+
+In this document we denote this ``cut-direction hybrid orbital'' by
+\[
+  \varphi_i^h .
+\]
+If there are several of them, we number them \(i=1,2,\ldots\)
+
+If this orbital is left usable in the calculation of fragment \(x\),
+the electrons of fragment \(x\) leak into a direction that properly
+belongs to the partner fragment. This is physically undesirable.
+
+Therefore, the FMO boundary treatment must do the following.
+
+\begin{quote}
+Remove the hybrid orbitals pointing along the severed bonds from the
+SCF variational space of the fragment.
+\end{quote}
+
+Here, the ``variational space'' is the set of degrees of freedom that
+the SCF is allowed to vary when searching for molecular orbitals. If an
+unwanted direction remains there, the SCF may end up using it.
+
+\section{A minimum of quantum chemistry vocabulary}
+
+\subsection{AOs and MOs}
+
+In quantum chemical calculations, molecular orbitals (MOs) are
+expressed as linear combinations of atomic orbitals (AOs):
+\[
+  \psi_p = \sum_\mu C_{\mu p}\chi_\mu .
+\]
+Here \(\chi_\mu\) are the AOs, \(\psi_p\) are the MOs, and
+\(C_{\mu p}\) are the coefficients specifying how much of each AO is
+mixed into each MO.
+
+The matrix collecting all MO coefficients is written \(\Cmat\).
+Roughly speaking, the SCF is a procedure that adjusts \(\Cmat\) to
+lower the electronic energy.
+
+\subsection{AOs are, in general, not orthogonal}
+
+The overlap between AOs is
+\[
+  S_{\mu\nu} = \langle \chi_\mu | \chi_\nu \rangle ,
+\]
+and the matrix collecting these is the overlap matrix \(\Smat\).
+
+If the AOs were perfectly orthogonal we would have
+\(\Smat=\mathbf I\). In practice, however, with atom-centered basis
+sets, AOs on different atoms overlap in space. Hence, in general,
+\[
+  \Smat \ne \mathbf I .
+\]
+This fact---that AOs are non-orthogonal---is the reason \(\Smat\)
+appears repeatedly in the equations below.
+
+\subsection{The hybrid orbitals to be removed}
+
+The cut-direction hybrid orbitals can also be expressed as linear
+combinations of AOs:
+\[
+  \varphi_i^h = \sum_\mu A_{\mu i}\chi_\mu .
+\]
+We write the matrix whose columns are these coefficients as \(\Amat\).
+If \(N\) is the number of AOs and \(m\) is the number of hybrid
+orbitals to be removed, then \(\Amat\) is an \(N\times m\) matrix. For
+example, if there is only one cut-direction \(sp^3\) hybrid, then
+\(m=1\) and \(\Amat\) is a single column vector.
+
+\section{What does it mean to ``not use the forbidden directions''?}
+
+Whether an MO \(\psi_p\) contains the hybrid orbital \(\varphi_i^h\) to
+be removed can be checked by their inner product:
+\[
+  \langle \varphi_i^h | \psi_p \rangle .
+\]
+If this vanishes, \(\psi_p\) has no component along \(\varphi_i^h\).
+
+We want this to vanish for every removal target \(i\) and every MO
+\(p\); in matrix form,
+\[
+  \Amat^\dagger \Smat \Cmat = \mathbf 0 .
+\]
+
+The reason \(\Smat\) enters here is that the AOs are non-orthogonal.
+Indeed,
+\begin{align*}
+\langle \varphi_i^h | \psi_p \rangle
+&=
+\left\langle
+\sum_\mu A_{\mu i}\chi_\mu
+\middle|
+\sum_\nu C_{\nu p}\chi_\nu
+\right\rangle \\
+&=
+\sum_{\mu\nu} A_{\mu i}^{*}
+\langle \chi_\mu | \chi_\nu \rangle
+C_{\nu p} \\
+&=
+\sum_{\mu\nu} A_{\mu i}^{*} S_{\mu\nu} C_{\nu p}.
+\end{align*}
+Collecting this into matrix form gives \(\Amat^\dagger\Smat\Cmat\).
+
+The mathematical goal of the boundary treatment can therefore be
+summarized in a single line:
+\[
+  \boxed{\Amat^\dagger \Smat \Cmat = \mathbf 0}
+\]
+This states that ``no MO contains a cut-direction hybrid orbital.''
+
+\section{The conventional method: pushing up with a level shift}
+
+The conventional method assigns a very large energy to the forbidden
+orbitals. The idea is simple:
+
+\begin{quote}
+Make using that direction so energetically costly that the SCF never
+chooses it.
+\end{quote}
+
+This method is called level-shift projection, or hybrid orbital
+projection.
+
+With the core Hamiltonian \(\Hcore\) and the environmental
+electrostatic potential \(\Venv\), the level-shifted matrix takes the
+form
+\[
+  \widetilde{\Hcore}
+  =
+  \Hcore+\Venv+\Smat\Amat\Bmat\Amat^\dagger\Smat .
+\]
+Here \(\Bmat\) is a diagonal matrix of large positive values:
+\[
+  \Bmat = \mathrm{diag}(B_1,B_2,\ldots,B_m).
+\]
+Typically, very large values are used for \(B_i\). This raises the
+orbital energies along the \(\varphi_i^h\) directions substantially,
+with the expectation that they are expelled from the occupied space.
+
+\subsection{Why the projection term has the form
+\(\Smat\Amat\Bmat\Amat^\dagger\Smat\)}
+
+The component form of the projection term is
+\[
+  P_{\mu\nu}
+  =
+  \sum_i B_i
+  \langle \chi_\mu | \varphi_i^h \rangle
+  \langle \varphi_i^h | \chi_\nu \rangle .
+\]
+
+The hybrid orbital \(\varphi_i^h\) is represented by the AO
+coefficients \(\Amat\), but the AOs are non-orthogonal. Consequently,
+\[
+  \langle \chi_\mu | \varphi_i^h \rangle
+  =
+  (\Smat\Amat)_{\mu i} ,
+\]
+and an \(\Smat\) likewise emerges from the inner product on the right.
+Therefore
+\[
+  \mathbf P = \Smat\Amat\Bmat\Amat^\dagger\Smat .
+\]
+
+If the AOs were orthogonal from the start, with \(\Smat=\mathbf I\),
+the projection term would simply be
+\[
+  \Amat\Bmat\Amat^\dagger .
+\]
+In other words, the two factors of \(\Smat\) on the left and right are
+a consequence of using non-orthogonal AOs.
+
+\section{Weaknesses of the level-shift method}
+
+Increasing \(B_i\) makes the components of the unwanted hybrid orbitals
+smaller. With finite \(B_i\), however, they never vanish completely.
+The residual components are roughly of size
+\[
+  O(B^{-1}) .
+\]
+
+On the other hand, making \(B_i\) too large places extremely large
+values inside the matrix. The condition number then deteriorates and
+the computation becomes numerically unstable. SCF convergence may also
+suffer.
+
+\begin{center}
+\begin{tabular}{|p{0.22\linewidth}|p{0.34\linewidth}|p{0.34\linewidth}|}
+\hline
+\textbf{Choice of \(B\)} & \textbf{Advantage} & \textbf{Drawback} \\
+\hline
+Small & Numerically relatively stable & Unwanted components tend to remain \\
+\hline
+Large & Unwanted components become small & Condition number tends to deteriorate \\
+\hline
+Infinite & Ideally complete removal & Unusable in actual computation \\
+\hline
+\end{tabular}
+\end{center}
+
+To avoid this problem, a method that does not use \(B\) at all is
+needed.
+
+\section{The new idea: do not penalize---make the choice impossible
+from the start}
+
+The level-shift method ``penalizes the forbidden direction whenever it
+is chosen.'' The rectangular-transformation approach changes the point
+of view:
+
+\begin{quote}
+Eliminate the forbidden directions from the variables from the very
+beginning.
+\end{quote}
+
+The variables the SCF varies are the MO coefficients \(\Cmat\). So,
+instead of varying \(\Cmat\) directly and freely, we express it through
+a smaller coefficient matrix \(\Cr\):
+\[
+  \Cmat = \Tmat\Cr .
+\]
+
+Here \(\Tmat\) is a tall \(N\times(N-m)\) matrix. Since the number of
+columns is \(N-m\) rather than \(N\), the number of degrees of freedom
+is reduced by \(m\). This is why we call it a ``rectangular
+transformation.''
+
+\(\Tmat\) is constructed so as to satisfy
+\[
+  \boxed{\Amat^\dagger\Smat\Tmat=\mathbf 0}
+\]
+Then
+\begin{align*}
+  \Amat^\dagger\Smat\Cmat
+  &=
+  \Amat^\dagger\Smat\Tmat\Cr \\
+  &=
+  \mathbf 0\,\Cr \\
+  &=
+  \mathbf 0 .
+\end{align*}
+This is crucially important. Whatever value \(\Cr\) takes, the
+resulting \(\Cmat=\Tmat\Cr\) always satisfies
+\[
+  \Amat^\dagger\Smat\Cmat=\mathbf 0 .
+\]
+That is, no matter how the SCF proceeds, the unwanted hybrid orbitals
+are unusable from the start.
+
+\section{What does \(\Tmat\) represent?}
+
+\(\Tmat\) is the matrix whose columns are the allowed directions only.
+The condition characterizing the directions to be removed is
+\[
+  \Amat^\dagger\Smat\mathbf v=\mathbf 0 .
+\]
+A vector \(\mathbf v\) satisfying this is orthogonal, in the
+\(\Smat\) metric, to the hybrid orbitals to be removed.
+
+The space of all such \(\mathbf v\) is written
+\[
+  \ker(\Amat^\dagger\Smat) ,
+\]
+where \(\ker\) stands for the kernel, i.e., the null space.
+
+The columns of \(\Tmat\) form a basis spanning this kernel. In other
+words, \(\Tmat\) is ``the matrix whose columns are exactly the
+directions orthogonal to the unwanted hybrid orbitals.''
+
+If the dimension of the full AO space is \(N\) and \(m\) hybrid
+orbitals are removed, the dimension of the remaining admissible space
+is
+\[
+  N-m .
+\]
+Hence \(\Tmat\) is an \(N\times(N-m)\) matrix.
+
+\section{An intuitive analogy}
+
+The difference between the two methods is easy to grasp through the
+following picture.
+
+\begin{center}
+\begin{tabular}{|p{0.22\linewidth}|p{0.35\linewidth}|p{0.33\linewidth}|}
+\hline
+\textbf{Method} & \textbf{Analogy} & \textbf{What happens} \\
+\hline
+Level shift & Build a steep hill on the forbidden road &
+If the hill is finite, some intrusion remains possible \\
+\hline
+Rectangular transformation & Erase the road from the map &
+That direction simply cannot be taken \\
+\hline
+\end{tabular}
+\end{center}
+
+The level shift is a ``penalty'' method. The rectangular transformation
+is a ``remove it from the options'' method. Because of this difference,
+the unwanted components are zero in principle under the rectangular
+transformation.
+
+\section{With the rectangular transformation, the level-shift term
+vanishes}
+
+The level-shifted matrix was
+\[
+  \widetilde{\Hcore}
+  =
+  \Hcore+\Venv+\Smat\Amat\Bmat\Amat^\dagger\Smat .
+\]
+Let us transform it into the admissible space, i.e., multiply by
+\(\Tmat^\dagger\) from the left and \(\Tmat\) from the right:
+\begin{align*}
+\Tmat^\dagger\widetilde{\Hcore}\Tmat
+&=
+\Tmat^\dagger(\Hcore+\Venv)\Tmat \\
+&\quad+
+\Tmat^\dagger\Smat\Amat\Bmat\Amat^\dagger\Smat\Tmat .
+\end{align*}
+The second term can be rewritten as
+\begin{align*}
+&\Tmat^\dagger\Smat\Amat\Bmat\Amat^\dagger\Smat\Tmat \\
+&\quad=
+(\Amat^\dagger\Smat\Tmat)^\dagger
+\Bmat
+(\Amat^\dagger\Smat\Tmat).
+\end{align*}
+But \(\Tmat\) is constructed so that
+\[
+  \Amat^\dagger\Smat\Tmat=\mathbf 0 .
+\]
+Therefore
+\[
+  (\Amat^\dagger\Smat\Tmat)^\dagger
+  \Bmat
+  (\Amat^\dagger\Smat\Tmat)
+  =
+  \mathbf 0 .
+\]
+
+Hence the matrix used in the reduced space is
+\[
+  \boxed{
+  \mathbf H_{\mathrm r}
+  =
+  \Tmat^\dagger(\Hcore+\Venv)\Tmat
+  }
+\]
+and \(B\) no longer appears anywhere.
+
+This is no accident. The role that \(B\) played---excluding the
+unwanted directions---has been taken over entirely by the condition on
+\(\Tmat\),
+\[
+  \Amat^\dagger\Smat\Tmat=\mathbf 0 .
+\]
+
+\section{The SCF equations in the reduced space}
+
+The ordinary Roothaan--Hall equation is a generalized eigenvalue
+problem because the AOs are non-orthogonal. After the rectangular
+transformation, one solves the following equation in the reduced space:
+\[
+  \Fr\Cr=\Sr\Cr\boldsymbol\varepsilon ,
+\]
+where
+\[
+  \Sr=\Tmat^\dagger\Smat\Tmat
+\]
+and
+\[
+  \Fr
+  =
+  \Tmat^\dagger
+  \left[
+    \Hcore+\Venv+\Gmat[\Dmat]
+  \right]
+  \Tmat .
+\]
+\(\Gmat[\Dmat]\) denotes the two-electron part, i.e., the Coulomb and
+exchange terms.
+
+The density matrix is also mapped back from the reduced space to the
+original AO space before use:
+\[
+  \Dmat = \Tmat\Dr\Tmat^\dagger .
+\]
+In this way, the two-electron integrals and the Fock-matrix
+construction are handled as quantities in the original AO space, while
+only the SCF degrees of freedom are reduced to dimension \(N-m\).
+
+\section{\(S\)-orthonormalization}
+
+It suffices for the columns of \(\Tmat\) to be orthogonal, in the
+\(\Smat\) sense, to the orbitals to be removed. As constructed,
+however, the overlap matrix of the reduced space,
+\[
+  \Sr=\Tmat^\dagger\Smat\Tmat ,
+\]
+need not be the identity.
+
+One can therefore orthonormalize the columns of \(\Tmat\) in the
+\(\Smat\) metric so that
+\[
+  \Tmat^\dagger\Smat\Tmat=\mathbf I .
+\]
+In that case the SCF equation in the reduced space becomes an ordinary
+eigenvalue problem:
+\[
+  \Fr\Cr=\Cr\boldsymbol\varepsilon .
+\]
+
+In an implementation, one first finds a basis of
+\[
+  \ker(\Amat^\dagger\Smat)
+\]
+and then applies L\"owdin or canonical orthogonalization to it to
+construct \(\Tmat\).
+
+\section{A concrete example: an \(sp^3\) carbon}
+
+Simplify the valence AOs of carbon to just the four functions
+\[
+  s,\quad p_x,\quad p_y,\quad p_z .
+\]
+From these four one can build four \(sp^3\) hybrid orbitals.
+
+In the ideal case they can be written, for example, as
+\begin{align*}
+h_1 &= \frac12(s+p_x+p_y+p_z), \\
+h_2 &= \frac12(s+p_x-p_y-p_z), \\
+h_3 &= \frac12(s-p_x+p_y-p_z), \\
+h_4 &= \frac12(s-p_x-p_y+p_z).
+\end{align*}
+
+If the severed bond points along \(h_1\), then \(h_1\) must not be used
+in the calculation of fragment \(x\). The allowed directions are then
+\(h_2,h_3,h_4\). Locally, a dimensional reduction
+\[
+  4\to 3
+\]
+takes place.
+
+In this simple orthogonal-basis example, the transformation matrix on
+the carbon is
+\[
+\Tmat_{\mathrm C}
+=
+\begin{array}{c|ccc}
+ & h_2 & h_3 & h_4\\
+\hline
+s   & \frac12 & \frac12  & \frac12 \\
+p_x & \frac12 & -\frac12 & -\frac12 \\
+p_y & -\frac12 & \frac12 & -\frac12 \\
+p_z & -\frac12 & -\frac12 & \frac12
+\end{array}
+\]
+This \(\Tmat_{\mathrm C}\) can be viewed as the matrix obtained by
+dropping the \(h_1\) column and keeping only the remaining three.
+
+In actual calculations the basis set is much larger and the AOs are
+non-orthogonal, so the coefficients are not such clean values of
+\(1/2\). In practice one constructs \(\Tmat\) using \(\Smat\) so that
+\[
+  \Amat^\dagger\Smat\Tmat=\mathbf 0 .
+\]
+Still, the idea is the same: ``exclude the one cut-direction hybrid and
+build the MOs from the remaining allowed directions only.''
+
+\section{Handling of nuclei and electron counts when a bond is severed}
+
+Both the rectangular transformation and the level-shift projection
+operate only on the electronic variational space, i.e., the MO
+coefficients \(\Cmat\). The nucleus of the \(\alpha\) carbon itself is
+never divided by these operations. Since this point is easy to
+misunderstand, we summarize it in its own section.
+
+\subsection{Nuclei are not divided}
+
+Even when a covalent bond is severed at the \(\alpha\) carbon, the
+carbon nucleus belongs, as a point charge, entirely to one of the
+fragments. Its nuclear charge is never halved, nor apportioned
+according to the number of hybrid orbitals. Of the four hybrids, only
+one (\(h_1\)) is removed; this merely reduces by one the number of
+directions the electrons can use, and neither the position of the
+nucleus nor the nuclear charge \(Z_{\mathrm C}\) changes.
+
+\begin{verbatim}
+   nucleus  Z_C = +6   <- point charge; belongs wholly to fragment x
+      |                    (never divided)
+   s, px, py, pz       <- all four AOs remain on the carbon
+      |
+   only the single direction h1 is removed
+   (neither the nucleus nor the AOs themselves)
+\end{verbatim}
+
+If the \(\alpha\) carbon is assigned to fragment \(x\), the pieces are
+distributed as follows.
+
+\begin{itemize}
+\item The nuclear charge \(+Z_{\mathrm C}\) enters the core Hamiltonian
+      \(\Hcore\) of fragment \(x\) (as nucleus--electron attraction).
+\item The nuclei on the partner-fragment side enter the environmental
+      electrostatic potential \(\Venv\).
+\item The AOs on the carbon (\(s,p_x,p_y,p_z\) and their
+      generalizations) all remain in the basis. What the rectangular
+      transformation removes is only ``one direction'' within the space
+      these AOs span.
+\end{itemize}
+
+In short, neither nuclei nor AOs are divided or deleted; what is
+transformed is only the set of directions available to the electrons.
+
+\subsection{The number of AOs does not decrease; what decreases is the
+number of variational degrees of freedom}
+
+This point is particularly prone to confusion, so we emphasize it. The
+rectangular transformation does not physically reduce the number of AO
+basis functions \(N\). The basis functions remain \(N\) in number, and
+the two-electron integrals are computed in the full \(N\)-dimensional
+space. What is reduced is the number of degrees of freedom the SCF may
+vary in searching for the MOs: from \(N\) to \(N-m\). In terms of the
+equations, it is simply that \(\Cr\) in \(\Cmat=\Tmat\Cr\) is
+\((N-m)\)-dimensional.
+
+\subsection{Which fragment keeps the two electrons of the severed bond?}
+
+When one covalent bond is severed, the assignment of the electron pair
+(two electrons) that occupied that bond must be decided separately.
+Removing a hybrid orbital only removes a ``direction''; it does not by
+itself determine the electron count. In the standard FMO procedure, the
+electron pair belonging to the severed bond is assigned to one of the
+fragments, and the treatment of the boundary carbon (the so-called
+bond-detached atom) is made consistent with that choice.
+
+An implementation must therefore keep the following three items
+mutually consistent:
+
+\begin{enumerate}
+\item To which fragment the nucleus (and core electrons) of the
+      \(\alpha\) carbon are assigned.
+\item To which fragment the electron pair of the severed bond is
+      assigned.
+\item Which hybrid orbitals are removed from the variational space.
+\end{enumerate}
+
+The rectangular transformation \(\Tmat\) (or the level shift
+\(\Bmat\)) is responsible only for the third item. The first and
+second are fixed separately as part of the definition of the fragment
+partitioning.
+
+\section{Similarities to and differences from the \(6\to5\)
+transformation of \(d\) functions}
+
+In quantum chemistry one sometimes transforms the six Cartesian \(d\)
+functions into the five spherical-harmonic \(d\) functions. This is
+also a \(6\to5\) dimensional reduction, so formally it resembles the
+rectangular transformation. The meaning, however, is different.
+
+\begin{center}
+\begin{tabular}{|p{0.18\linewidth}|p{0.36\linewidth}|p{0.36\linewidth}|}
+\hline
+\textbf{Aspect} & \textbf{Cartesian \(d\) to spherical \(d\)} &
+\textbf{FMO boundary rectangular transformation} \\
+\hline
+Dimensions & \(6\to5\) & \(N\to N-m\) \\
+\hline
+What is dropped & The redundant \(s\)-like component mixed into the
+\(d\) functions & The hybrid orbital along the severed bond \\
+\hline
+How the matrix is determined & An essentially universal transformation
+fixed by angular momentum & Depends on the bond direction, \(\Amat\),
+and \(\Smat\) \\
+\hline
+Purpose & Tidy up the representation of the basis functions & Remove
+unwanted components at the fragment boundary \\
+\hline
+\end{tabular}
+\end{center}
+
+Both reduce dimensions with a rectangular matrix, and in that respect
+they are alike. However, the \(\Tmat\) of the FMO boundary treatment is
+a matrix that imposes a physical constraint determined system by
+system.
+
+\section{Relation to the level-shift method}
+
+The rectangular-transformation approach is not an unrelated alternative
+to the level-shift method. Rather, it can be understood as follows:
+\[
+  \boxed{\text{deflation}\ \Longleftrightarrow\ B\to\infty}
+\]
+That is, the rectangular transformation corresponds to the
+\(B\to\infty\) limit of the level-shift method.
+
+In the level-shift method, the larger \(B\) is, the smaller the
+components of the unwanted orbitals become. Ideally, taking \(B\) to
+infinity would remove them completely. But an infinite \(B\) cannot be
+used in actual numerical computation, and using a very large finite
+value worsens the condition number.
+
+The rectangular transformation realizes this ``ideal state of infinite
+\(B\)'' without actually using \(B\). As a result, the tuning problem
+of ``which value to choose for the level shift \(B\)'' disappears
+altogether.
+
+\section{Where do the matrices become non-square?}
+
+A natural question at this point is: ``In the original approach with
+the level shift \(B\), do the row and column dimensions also change,
+making the matrices non-square?'' The short answer is:
+
+\begin{quote}
+In the level-shift method every matrix remains square,
+\(N\times N\). Rectangular matrices appear only in the
+rectangular-transformation approach, and even there the rectangular
+one is the transformation matrix \(\Tmat\) itself; the matrix that is
+finally diagonalized is again square.
+\end{quote}
+
+\subsection{Level-shift method: the shape stays \(N\times N\)}
+
+The level-shifted matrix
+\[
+  \widetilde{\Hcore}
+  =
+  \Hcore+\Venv+\Smat\Amat\Bmat\Amat^\dagger\Smat
+\]
+is an \(N\times N\) square matrix. Tracking the sizes of the projection
+term \(\Smat\Amat\Bmat\Amat^\dagger\Smat\),
+\[
+  \underbrace{\Smat}_{N\times N}\,
+  \underbrace{\Amat}_{N\times m}\,
+  \underbrace{\Bmat}_{m\times m}\,
+  \underbrace{\Amat^\dagger}_{m\times N}\,
+  \underbrace{\Smat}_{N\times N}
+  \;\longrightarrow\; N\times N .
+\]
+Since \(m\) appears in the middle, the rank is \(m\), but the
+``shape''---rows \(\times\) columns---remains \(N\times N\).
+
+In the level-shift method, therefore:
+
+\begin{itemize}
+\item The generalized eigenvalue problem to be solved stays
+      \(N\times N\); the dimension is not reduced.
+\item \(N\) MOs are still obtained. The unwanted hybrid-orbital
+      directions remain among the \(N\) solutions as high-lying virtual
+      orbitals whose energies have been raised by \(B\). They do not
+      disappear with a reduction of dimension; they are merely ``pushed
+      up and left unoccupied.''
+\end{itemize}
+
+\subsection{Rectangular transformation: only \(\Tmat\) is rectangular}
+
+In the rectangular-transformation approach, the transformation matrix
+\[
+  \Tmat:\quad N\times(N-m)\qquad(\text{rectangular})
+\]
+is the only rectangular matrix. Sandwiching with it, the transformed
+matrices
+\[
+  \Fr=\Tmat^\dagger\Fmat\Tmat:\ (N-m)\times(N-m),\qquad
+  \Sr=\Tmat^\dagger\Smat\Tmat:\ (N-m)\times(N-m)
+\]
+are again square, though their size has shrunk from \(N\) to
+\(N-m\).
+
+In other words, a ``rectangular matrix with different row and column
+dimensions'' appears only as the \(\Tmat\) of the rectangular
+transformation; the Fock and overlap matrices actually diagonalized are
+square in both methods.
+
+\begin{center}
+\begin{tabular}{|p{0.26\linewidth}|p{0.3\linewidth}|p{0.3\linewidth}|}
+\hline
+\textbf{Matrix} & \textbf{Level-shift projection} &
+\textbf{Deflation by rectangular transformation} \\
+\hline
+Transformation matrix & None (effectively the identity \(\mathbf I\),
+\(N\times N\)) &
+\(\Tmat\): \(N\times(N-m)\) (rectangular) \\
+\hline
+Matrix diagonalized & \(\widetilde{\Hcore}\): \(N\times N\) (square) &
+\(\Fr,\Sr\): \((N-m)\times(N-m)\) (square) \\
+\hline
+Number of MOs & \(N\) & \(N-m\) \\
+\hline
+Treatment of unwanted directions & Remain among the \(N\) solutions at
+high energy & Simply absent from the space \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Another viewpoint: the column count of \(\Tmat\) is the
+answer}
+
+That \(\Tmat\) is rectangular is itself the expression of the fact that
+\(m\) directions have been dropped. A square \(N\times N\) matrix is a
+transformation that ``keeps all \(N\) directions,'' and the level shift
+corresponds to exactly this (the identity transformation plus a
+projection term). A rectangular \(N\times(N-m)\) matrix is a
+transformation that ``keeps only \(N-m\) directions,'' and this is the
+essence of deflation.
+
+The correspondence of the previous section,
+\[
+  \text{deflation}\ \Longleftrightarrow\ B\to\infty ,
+\]
+can be restated in these terms as well. In the \(B\to\infty\) limit,
+\(m\) directions of the level shift's \(N\times N\) space are raised
+infinitely high and become effectively unusable, and the remaining
+\(N-m\) dimensions coincide exactly with the reduced space of the
+rectangular transformation.
+
+\section{Comparison of the two methods}
+
+\begin{center}
+\begin{tabular}{|p{0.18\linewidth}|p{0.36\linewidth}|p{0.36\linewidth}|}
+\hline
+\textbf{Item} & \textbf{Level-shift projection} &
+\textbf{Deflation by rectangular transformation} \\
+\hline
+Basic idea & Penalize unwanted directions energetically & Remove
+unwanted directions from the variables \\
+\hline
+Condition used & Add \(\Smat\Amat\Bmat\Amat^\dagger\Smat\) to the Fock
+matrix & Use a \(\Tmat\) satisfying
+\(\Amat^\dagger\Smat\Tmat=\mathbf 0\) \\
+\hline
+\(B\) & Required & Not required \\
+\hline
+Exactness of removal & Approximate for finite \(B\) & Exact in
+principle \\
+\hline
+Residual components & Roughly \(O(B^{-1})\) & Zero to machine
+precision \\
+\hline
+Dimension & Stays \(N\) & \(N-m\) \\
+\hline
+Numerical stability & Condition number can deteriorate for large
+\(B\) & No \(B\)-induced conditioning problems \\
+\hline
+Viewpoint & Push out by making \(B\) large & Realize the
+\(B\to\infty\) limit with a finite transformation \\
+\hline
+\end{tabular}
+\end{center}
+
+\section{Implementation outline}
+
+An implementation proceeds as follows.
+\begin{enumerate}
+\item Build the cut-direction hybrid orbitals as AO coefficients:
+      \(\Amat\).
+\item Prepare the AO overlap matrix: \(\Smat\).
+\item Find a basis spanning the kernel:
+      \(\ker(\Amat^\dagger\Smat)\).
+\item If desired, \(\Smat\)-orthonormalize that basis to obtain a
+      \(\Tmat\) satisfying \(\Tmat^\dagger\Smat\Tmat=\mathbf I\).
+\item Transform the Fock and overlap matrices into the reduced space:
+      \[
+        \Fr=\Tmat^\dagger\Fmat\Tmat,\qquad
+        \Sr=\Tmat^\dagger\Smat\Tmat .
+      \]
+\item Solve the SCF equation in the reduced space:
+      \[
+        \Fr\Cr=\Sr\Cr\boldsymbol\varepsilon .
+      \]
+\item Map back to the original AO space as needed:
+      \[
+        \Cmat=\Tmat\Cr,\qquad
+        \Dmat=\Tmat\Dr\Tmat^\dagger .
+      \]
+\end{enumerate}
+Nowhere in this procedure does the level shift \(B\) appear.
+
+\section{Summary}
+
+In FMO, fragments are created by severing covalent bonds, so the hybrid
+orbitals pointing along the severed bonds must be removed from the SCF
+of the corresponding fragment.
+
+The conventional level-shift method assigns a large energy \(B\) to the
+unwanted hybrid orbitals to expel them from the occupied space. With
+finite \(B\), however, the unwanted components never vanish completely,
+and making \(B\) too large causes numerical instability.
+
+In the rectangular-transformation approach, one constructs a matrix
+\(\Tmat\) that spans only the space \(\Smat\)-orthogonal to the
+unwanted hybrid orbitals, and sets
+\[
+  \Cmat=\Tmat\Cr .
+\]
+Since
+\[
+  \Amat^\dagger\Smat\Tmat=\mathbf 0 ,
+\]
+we have, for any \(\Cr\),
+\[
+  \Amat^\dagger\Smat\Cmat=\mathbf 0 .
+\]
+Therefore the unwanted hybrid orbitals never mix into the MOs in the
+first place.
+
+This method realizes the \(B\to\infty\) limit of the level-shift method
+with finite matrix operations and without using \(B\). As a result, the
+need to tune the level-shift value disappears, and the trade-off
+between residual components and conditioning problems is avoided.
+
+\section*{List of symbols}
+
+\begin{longtable}{|p{0.28\linewidth}|p{0.62\linewidth}|}
+\hline
+\textbf{Symbol} & \textbf{Meaning} \\
+\hline
+\(\Hcore\) & Core Hamiltonian \\
+\hline
+\(\Venv\) & Environmental electrostatic potential from the other
+fragments, etc. \\
+\hline
+\(Z_{\mathrm C}\) & Nuclear charge of the boundary (\(\alpha\)) carbon;
+not divided, belongs to one fragment \\
+\hline
+\(\Smat\) & AO overlap matrix \\
+\hline
+\(\chi_\mu\) & AO basis function \\
+\hline
+\(\psi_p\) & MO \\
+\hline
+\(\Cmat\) & MO coefficients in the original AO space \\
+\hline
+\(\Cr\) & MO coefficients in the reduced space \\
+\hline
+\(\varphi_i^h\) & Hybrid orbital to be removed \\
+\hline
+\(\Amat\) & AO coefficients of the hybrid orbitals to be removed \\
+\hline
+\(m\) & Number of hybrid orbitals to be removed \\
+\hline
+\(N\) & Number of AO basis functions \\
+\hline
+\(\Bmat\) & Level-shift matrix \\
+\hline
+\(\Tmat\) & Rectangular transformation matrix spanning the admissible
+space only \\
+\hline
+\(\Fmat\) & Fock matrix \\
+\hline
+\(\Gmat[\Dmat]\) & Two-electron term \\
+\hline
+\(\Dmat\) & Density matrix \\
+\hline
+\(\boldsymbol\varepsilon\) & Orbital energies \\
+\hline
+\end{longtable}
+
+\end{document}
